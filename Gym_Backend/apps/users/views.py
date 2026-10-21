@@ -7,11 +7,19 @@ from .models import User
 from .serializers import (
     UserRegistrationSerializer,
     UserProfileSerializer,
+    AdminUserListSerializer,
     CustomTokenObtainPairSerializer,
 )
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
+
+
+class AdminUserListView(generics.ListAPIView):
+    """Permite al administrador ver la lista de todos los usuarios registrados y sus métricas."""
+    queryset = User.objects.all().order_by('-date_joined')
+    serializer_class = AdminUserListSerializer
+    permission_classes = [permissions.IsAdminUser]
 
 
 class RegisterView(generics.CreateAPIView):

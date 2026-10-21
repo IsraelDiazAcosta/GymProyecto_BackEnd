@@ -1,5 +1,6 @@
 from rest_framework import viewsets, permissions, filters
 from .models import Equipment, MuscleGroup, Exercise, ExerciseMedia
+from .permissions import IsAdminOrReadOnly
 from .serializers import (
     EquipmentSerializer,
     MuscleGroupSerializer,
@@ -11,7 +12,7 @@ from .serializers import (
 class EquipmentViewSet(viewsets.ModelViewSet):
     queryset = Equipment.objects.all()
     serializer_class = EquipmentSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [IsAdminOrReadOnly]
     filter_backends = [filters.SearchFilter]
     search_fields = ['name', 'brand', 'equipment_type']
 
@@ -26,7 +27,7 @@ class EquipmentViewSet(viewsets.ModelViewSet):
 class MuscleGroupViewSet(viewsets.ModelViewSet):
     queryset = MuscleGroup.objects.all()
     serializer_class = MuscleGroupSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [IsAdminOrReadOnly]
     filter_backends = [filters.SearchFilter]
     search_fields = ['name', 'body_part']
 
@@ -40,7 +41,7 @@ class MuscleGroupViewSet(viewsets.ModelViewSet):
 
 class ExerciseViewSet(viewsets.ModelViewSet):
     queryset = Exercise.objects.prefetch_related('exercise_muscles__muscle', 'media').select_related('equipment').all()
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [IsAdminOrReadOnly]
     filter_backends = [filters.SearchFilter]
     search_fields = ['name', 'equipment__name', 'muscles__name']
 
@@ -68,7 +69,7 @@ class ExerciseViewSet(viewsets.ModelViewSet):
 class ExerciseMediaViewSet(viewsets.ModelViewSet):
     queryset = ExerciseMedia.objects.all()
     serializer_class = ExerciseMediaSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [IsAdminOrReadOnly]
 
     def get_queryset(self):
         queryset = super().get_queryset()

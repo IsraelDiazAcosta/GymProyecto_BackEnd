@@ -43,48 +43,77 @@
         </div>
         <div id="user-info" style="display:none;">
             <span style="color:#28a745; font-weight:bold;">✓ Sesión Iniciada:</span> <strong id="user-email"></strong>
+            <span id="user-role-badge" style="margin-left: 8px;" class="badge"></span>
+            <button id="btn-admin-users" class="secondary" onclick="toggleUsuariosAdmin()" style="display:none; margin-left: 10px; background:#d46b08;">👥 Ver Todos los Usuarios</button>
             <button class="secondary" onclick="logout()" style="margin-left: 10px;">Cerrar Sesión</button>
+
+            <!-- Tabla de usuarios para el Admin -->
+            <div id="admin-users-panel" style="display:none; margin-top:12px; background:#fff8e6; border:1px solid #ffd591; padding:10px; border-radius:4px;">
+                <strong>👥 Directorio Completo de Usuarios Registrados (Endpoint: <code>/api/v1/auth/users/</code>):</strong>
+                <button class="secondary" onclick="cargarUsuariosAdmin()" style="font-size:11px; padding:3px 6px; float:right;">🔄 Actualizar</button>
+                <table style="background:white; margin-top:8px;">
+                    <thead>
+                        <tr>
+                            <th>Email</th>
+                            <th>Rol</th>
+                            <th>Nivel</th>
+                            <th>Peso (kg)</th>
+                            <th>Rutinas</th>
+                            <th>Entrenamientos</th>
+                            <th>Fecha Registro</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-admin-usuarios">
+                        <tr><td colspan="7">Cargando usuarios...</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
     <div class="grid">
-        <!-- 2. CATÁLOGO DE EJERCICIOS + AGREGAR NUEVO -->
+        <!-- 2. CATÁLOGO DE EJERCICIOS + AGREGAR NUEVO (SOLO ADMIN) -->
         <div class="col box">
             <h2>2. Catálogo de Ejercicios y Multimedia</h2>
             
-            <!-- Formulario para que el Admin/Usuario cree ejercicios nuevos -->
-            <details style="margin-bottom: 12px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px; border-radius: 4px;">
-                <summary style="cursor: pointer; font-weight: bold; color: #0066cc;">➕ Agregar Nuevo Ejercicio al Catálogo</summary>
-                <div style="margin-top: 8px;">
-                    <input type="text" id="nuevo-ex-nombre" placeholder="Nombre (ej. Press Inclinado con Mancuernas)" style="width:100%;"><br>
-                    
-                    <div class="form-row">
-                        <select id="nuevo-ex-maquina">
-                            <option value="">-- Seleccionar Máquina / Equipo --</option>
-                        </select>
-                        <select id="nuevo-ex-musculo">
-                            <option value="">-- Músculo Principal --</option>
-                        </select>
-                    </div>
+            <!-- Formulario exclusivo para Administradores -->
+            <div id="admin-catalog-box" style="display:none; margin-bottom: 12px; background: #fff8e6; border: 1px solid #ffd591; padding: 10px; border-radius: 4px;">
+                <details>
+                    <summary style="cursor: pointer; font-weight: bold; color: #d46b08;">⚙️ Panel Admin: Agregar Nuevo Ejercicio al Catálogo</summary>
+                    <div style="margin-top: 8px;">
+                        <input type="text" id="nuevo-ex-nombre" placeholder="Nombre (ej. Press Inclinado con Mancuernas)" style="width:100%;"><br>
+                        
+                        <div class="form-row">
+                            <select id="nuevo-ex-maquina">
+                                <option value="">-- Seleccionar Máquina / Equipo --</option>
+                            </select>
+                            <select id="nuevo-ex-musculo">
+                                <option value="">-- Músculo Principal --</option>
+                            </select>
+                        </div>
 
-                    <div class="form-row">
-                        <select id="nuevo-ex-mecanica">
-                            <option value="compound">Multiarticular / Compuesto</option>
-                            <option value="isolation">Aislamiento / Monoarticular</option>
-                        </select>
-                        <select id="nuevo-ex-dificultad">
-                            <option value="beginner">Principiante</option>
-                            <option value="intermediate">Intermedio</option>
-                            <option value="advanced">Avanzado</option>
-                        </select>
-                    </div>
+                        <div class="form-row">
+                            <select id="nuevo-ex-mecanica">
+                                <option value="compound">Multiarticular / Compuesto</option>
+                                <option value="isolation">Aislamiento / Monoarticular</option>
+                            </select>
+                            <select id="nuevo-ex-dificultad">
+                                <option value="beginner">Principiante</option>
+                                <option value="intermediate">Intermedio</option>
+                                <option value="advanced">Avanzado</option>
+                            </select>
+                        </div>
 
-                    <textarea id="nuevo-ex-instrucciones" placeholder="Instrucciones paso a paso..." style="width:100%; height:45px;"></textarea><br>
-                    <input type="url" id="nuevo-ex-video" placeholder="URL de video (ej. https://youtu.be/... o link a MP4)" style="width:100%;"><br>
-                    
-                    <button onclick="crearNuevoEjercicio()" style="width:100%; margin-top:5px;">💾 Guardar Ejercicio en Catálogo</button>
-                </div>
-            </details>
+                        <textarea id="nuevo-ex-instrucciones" placeholder="Instrucciones paso a paso..." style="width:100%; height:45px;"></textarea><br>
+                        <input type="url" id="nuevo-ex-video" placeholder="URL de video (ej. https://youtu.be/... o link a MP4)" style="width:100%;"><br>
+                        
+                        <button onclick="crearNuevoEjercicio()" style="width:100%; margin-top:5px; background:#d46b08;">💾 Publicar en Catálogo Oficial</button>
+                    </div>
+                </details>
+            </div>
+            <div id="user-catalog-notice" style="display:none; font-size:12px; color:#666; margin-bottom:8px; background:#f0f2f5; padding:6px; border-radius:3px;">
+                🔒 <em>Catálogo oficial gestionado por administradores. Puedes usar estos ejercicios para tus rutinas.</em>
+            </div>
 
             <button class="secondary" onclick="cargarEjercicios()" style="font-size:12px; padding:4px 8px;">🔄 Refrescar Lista</button>
             <ul id="lista-ejercicios" style="padding-left: 20px; max-height: 220px; overflow-y: auto;"></ul>
@@ -190,12 +219,80 @@
         let musculosGlobales = [];
         let sesionActivaId = null;
 
+        let isStaff = localStorage.getItem('isStaff') === 'true';
+
         // Auto login
         if (accessToken) {
+            mostrarSesionActiva(localStorage.getItem('userEmail') || 'Usuario Conectado', isStaff);
+            inicializarDatos();
+        }
+
+        function mostrarSesionActiva(email, adminStatus) {
             document.getElementById('login-form').style.display = 'none';
             document.getElementById('user-info').style.display = 'block';
-            document.getElementById('user-email').innerText = localStorage.getItem('userEmail') || 'Usuario Conectado';
-            inicializarDatos();
+            document.getElementById('user-email').innerText = email;
+
+            const badge = document.getElementById('user-role-badge');
+            const adminBox = document.getElementById('admin-catalog-box');
+            const noticeBox = document.getElementById('user-catalog-notice');
+            const btnUsers = document.getElementById('btn-admin-users');
+
+            if (adminStatus) {
+                badge.innerText = '🛡️ Administrador';
+                badge.style.background = '#d46b08';
+                adminBox.style.display = 'block';
+                noticeBox.style.display = 'none';
+                btnUsers.style.display = 'inline-block';
+            } else {
+                badge.innerText = '👤 Usuario Estándar';
+                badge.style.background = '#6c757d';
+                adminBox.style.display = 'none';
+                noticeBox.style.display = 'block';
+                btnUsers.style.display = 'none';
+                document.getElementById('admin-users-panel').style.display = 'none';
+            }
+        }
+
+        async function toggleUsuariosAdmin() {
+            const panel = document.getElementById('admin-users-panel');
+            if (panel.style.display === 'none') {
+                panel.style.display = 'block';
+                await cargarUsuariosAdmin();
+            } else {
+                panel.style.display = 'none';
+            }
+        }
+
+        async function cargarUsuariosAdmin() {
+            try {
+                const res = await fetch(`${API_URL}/auth/users/`, { headers: getHeaders() });
+                if (!res.ok) return;
+                const data = await res.json();
+                const users = data.results || data;
+                const tbody = document.getElementById('tabla-admin-usuarios');
+                tbody.innerHTML = '';
+
+                users.forEach(u => {
+                    const tr = document.createElement('tr');
+                    const rolBadge = u.is_staff 
+                        ? '<span class="badge" style="background:#d46b08;">Admin</span>' 
+                        : '<span class="badge" style="background:#6c757d;">Usuario</span>';
+                    const fecha = new Date(u.date_joined).toLocaleDateString();
+
+                    tr.innerHTML = `
+                        <td><strong>${u.email}</strong> ${u.username ? '('+u.username+')' : ''}</td>
+                        <td>${rolBadge}</td>
+                        <td>${u.experience_level || 'No definido'}</td>
+                        <td>${u.current_weight ? u.current_weight + ' kg' : '-'}</td>
+                        <td><strong>${u.routines_count}</strong></td>
+                        <td><strong>${u.workouts_count}</strong></td>
+                        <td>${fecha}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch(e) {
+                console.error('Error cargando usuarios admin:', e);
+            }
         }
 
         async function login() {
@@ -211,11 +308,11 @@
             if (res.ok) {
                 const data = await res.json();
                 accessToken = data.access;
+                isStaff = data.user && data.user.is_staff;
                 localStorage.setItem('token', accessToken);
                 localStorage.setItem('userEmail', email);
-                document.getElementById('login-form').style.display = 'none';
-                document.getElementById('user-info').style.display = 'block';
-                document.getElementById('user-email').innerText = email;
+                localStorage.setItem('isStaff', isStaff ? 'true' : 'false');
+                mostrarSesionActiva(email, isStaff);
                 inicializarDatos();
             } else {
                 alert('Error al iniciar sesión. Revisa las credenciales.');

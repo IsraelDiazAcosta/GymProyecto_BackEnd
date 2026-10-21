@@ -25,8 +25,22 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('id', 'email', 'username', 'avatar', 'experience_level', 'current_weight', 'height', 'bio', 'date_joined')
-        read_only_fields = ('id', 'email', 'date_joined')
+        fields = ('id', 'email', 'username', 'avatar', 'experience_level', 'current_weight', 'height', 'bio', 'is_staff', 'date_joined')
+        read_only_fields = ('id', 'email', 'is_staff', 'date_joined')
+
+
+class AdminUserListSerializer(serializers.ModelSerializer):
+    """Serializer para que el administrador pueda auditar a todos los usuarios."""
+    routines_count = serializers.IntegerField(source='routines.count', read_only=True)
+    workouts_count = serializers.IntegerField(source='workout_sessions.count', read_only=True)
+
+    class Meta:
+        model = User
+        fields = (
+            'id', 'email', 'username', 'experience_level', 
+            'current_weight', 'height', 'is_staff', 'is_active', 
+            'routines_count', 'workouts_count', 'date_joined'
+        )
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -37,6 +51,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             'email': self.user.email,
             'username': self.user.username,
             'experience_level': self.user.experience_level,
+            'is_staff': self.user.is_staff,
         }
         return data
 
