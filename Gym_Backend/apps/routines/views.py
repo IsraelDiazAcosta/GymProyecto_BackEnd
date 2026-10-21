@@ -27,7 +27,46 @@ class RoutineViewSet(viewsets.ModelViewSet):
         ).prefetch_related('days__exercises__target_sets', 'days__exercises__exercise')
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        routine = serializer.save(user=self.request.user)
+        RoutineDay.objects.create(routine=routine, name='Día 1', order=1)
+
+    @action(detail=True, methods=['post'], url_path='add-exercise')
+    def add_exercise(self, request, pk=None):
+        """Agrega un ejercicio del catálogo a la rutina con sus series y repeticiones objetivo."""
+        from django.shortcuts import get_object_or_404
+        from apps.catalog.models import Exercise
+
+        routine = self.get_object()
+        exercise_id = request.data.get('exercise_id')
+        sets_count = int(request.data.get('sets_count', 3))
+        min_reps = int(request.data.get('min_reps', 8))
+        max_reps = int(request.data.get('max_reps', 12))
+        rest_seconds = int(request.data.get('rest_seconds', 90))
+        notes = request.data.get('notes', '')
+
+        day = routine.days.first()
+        if not day:
+            day = RoutineDay.objects.create(routine=routine, name='Día 1', order=1)
+
+        exercise = get_object_or_404(Exercise, pk=exercise_id)
+        next_order = day.exercises.count() + 1
+        routine_ex = RoutineExercise.objects.create(
+            routine_day=day,
+            exercise=exercise,
+            order=next_order,
+            rest_seconds=rest_seconds,
+            notes=notes
+        )
+
+        for s in range(1, sets_count + 1):
+            RoutineSet.objects.create(
+                routine_exercise=routine_ex,
+                set_number=s,
+                min_reps=min_reps,
+                max_reps=max_reps
+            )
+
+        return Response(RoutineDetailSerializer(routine, context={'request': request}).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['post'], url_path='clone')
     def clone_routine(self, request, pk=None):

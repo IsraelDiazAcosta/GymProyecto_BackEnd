@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Gym API - Demostración Funcional</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 15px; line-height: 1.4; background: #f4f6f8; color: #222; }
+        .box { background: white; border: 1px solid #d0d7de; padding: 15px; margin-bottom: 18px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        h2 { margin-top: 0; border-bottom: 2px solid #e1e4e8; padding-bottom: 6px; font-size: 1.25rem; }
+        h3 { margin: 8px 0; font-size: 1.05rem; }
+        input, select, button, textarea { padding: 6px 10px; margin: 4px 0; font-size: 13px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        button { cursor: pointer; background: #0066cc; color: white; border: none; font-weight: 600; padding: 7px 12px; }
+        button:hover { background: #0052a3; }
+        button.secondary { background: #6c757d; }
+        button.secondary:hover { background: #5a6268; }
+        button.success { background: #28a745; font-size: 14px; padding: 9px 15px; }
+        button.success:hover { background: #218838; }
+        .grid { display: flex; gap: 15px; flex-wrap: wrap; }
+        .col { flex: 1; min-width: 320px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13px; }
+        th, td { border: 1px solid #ddd; padding: 6px 8px; text-align: left; }
+        th { background: #eef2f5; font-weight: 600; }
+        .media-box { background: #f8f9fa; border: 1px solid #e2e8f0; padding: 10px; margin-top: 10px; border-radius: 4px; }
+        .badge { background: #17a2b8; color: white; padding: 2px 6px; border-radius: 3px; font-size: 11px; font-weight: bold; }
+        .routine-card { border: 1px solid #ccd0d5; background: #fff; padding: 10px; margin-bottom: 10px; border-radius: 4px; }
+        .exercise-item { background: #f1f3f5; padding: 6px 10px; margin: 4px 0; border-radius: 3px; font-size: 13px; }
+        .form-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 5px; }
+        .form-row input, .form-row select { flex: 1; min-width: 120px; }
+    </style>
+</head>
+<body>
+
+    <h1 style="margin: 0 0 5px 0;">🏋️ Demostración Funcional de la API (Backend & Flujo Completo)</h1>
+    <p style="margin: 0 0 15px 0; color: #555;">Conectado a <code>/api/v1/</code> en tiempo real.</p>
+
+    <!-- 1. USUARIO / SESIÓN -->
+    <div class="box">
+        <h2>1. Usuario / Inicio de Sesión</h2>
+        <div id="login-form">
+            <input type="email" id="email" value="admin@gym.com" placeholder="Email" style="width: 200px;">
+            <input type="password" id="password" value="Admin123!" placeholder="Contraseña" style="width: 150px;">
+            <button onclick="login()">Iniciar Sesión</button>
+        </div>
+        <div id="user-info" style="display:none;">
+            <span style="color:#28a745; font-weight:bold;">✓ Sesión Iniciada:</span> <strong id="user-email"></strong>
+            <button class="secondary" onclick="logout()" style="margin-left: 10px;">Cerrar Sesión</button>
+        </div>
+    </div>
+
+    <div class="grid">
+        <!-- 2. CATÁLOGO DE EJERCICIOS + AGREGAR NUEVO -->
+        <div class="col box">
+            <h2>2. Catálogo de Ejercicios y Multimedia</h2>
+            
+            <!-- Formulario para que el Admin/Usuario cree ejercicios nuevos -->
+            <details style="margin-bottom: 12px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px; border-radius: 4px;">
+                <summary style="cursor: pointer; font-weight: bold; color: #0066cc;">➕ Agregar Nuevo Ejercicio al Catálogo</summary>
+                <div style="margin-top: 8px;">
+                    <input type="text" id="nuevo-ex-nombre" placeholder="Nombre (ej. Press Inclinado con Mancuernas)" style="width:100%;"><br>
+                    
+                    <div class="form-row">
+                        <select id="nuevo-ex-maquina">
+                            <option value="">-- Seleccionar Máquina / Equipo --</option>
+                        </select>
+                        <select id="nuevo-ex-musculo">
+                            <option value="">-- Músculo Principal --</option>
+                        </select>
+                    </div>
+
+                    <div class="form-row">
+                        <select id="nuevo-ex-mecanica">
+                            <option value="compound">Multiarticular / Compuesto</option>
+                            <option value="isolation">Aislamiento / Monoarticular</option>
+                        </select>
+                        <select id="nuevo-ex-dificultad">
+                            <option value="beginner">Principiante</option>
+                            <option value="intermediate">Intermedio</option>
+                            <option value="advanced">Avanzado</option>
+                        </select>
+                    </div>
+
+                    <textarea id="nuevo-ex-instrucciones" placeholder="Instrucciones paso a paso..." style="width:100%; height:45px;"></textarea><br>
+                    <input type="url" id="nuevo-ex-video" placeholder="URL de video (ej. https://youtu.be/... o link a MP4)" style="width:100%;"><br>
+                    
+                    <button onclick="crearNuevoEjercicio()" style="width:100%; margin-top:5px;">💾 Guardar Ejercicio en Catálogo</button>
+                </div>
+            </details>
+
+            <button class="secondary" onclick="cargarEjercicios()" style="font-size:12px; padding:4px 8px;">🔄 Refrescar Lista</button>
+            <ul id="lista-ejercicios" style="padding-left: 20px; max-height: 220px; overflow-y: auto;"></ul>
+
+            <!-- Vista previa del ejercicio seleccionado -->
+            <div id="detalle-ejercicio" class="media-box" style="display:none;">
+                <h3 id="det-nombre" style="margin:0; color:#0066cc;"></h3>
+                <p style="margin:4px 0;"><strong>Máquina:</strong> <span id="det-maquina"></span> | <strong>Músculos:</strong> <span id="det-musculo"></span></p>
+                <p style="margin:4px 0; font-size:12px;"><strong>Instrucciones:</strong> <span id="det-instrucciones"></span></p>
+                <div id="det-multimedia"></div>
+            </div>
+        </div>
+
+        <!-- 3. RUTINAS DEL USUARIO + AGREGAR EJERCICIOS DEL CATÁLOGO -->
+        <div class="col box">
+            <h2>3. Rutinas del Usuario</h2>
+            
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; padding:10px; margin-bottom:12px; border-radius:4px;">
+                <strong>Crear Nueva Rutina:</strong><br>
+                <div style="display:flex; gap:6px; margin-top:4px;">
+                    <input type="text" id="nueva-rutina-titulo" placeholder="Ej: Lunes-Pecho, Pierna Pesada" style="flex:1;">
+                    <button onclick="crearRutina()">Crear Rutina</button>
+                </div>
+            </div>
+
+            <button class="secondary" onclick="cargarRutinas()" style="font-size:12px; padding:4px 8px; margin-bottom: 8px;">🔄 Refrescar Mis Rutinas</button>
+            <div id="lista-rutinas"></div>
+        </div>
+    </div>
+
+    <!-- 4. LLEVAR MARCAS (RUTINA -> EJERCICIOS DE LA RUTINA -> PESO Y REPS) -->
+    <div class="box">
+        <h2>4. Registro de Marcas (Peso y Repeticiones para Progresión)</h2>
+        <p style="margin:0 0 10px 0; font-size:13px; color:#555;">
+            Selecciona tu rutina, elige el ejercicio que vas a realizar y anota el peso y las repeticiones para llevar el control de tu marca.
+        </p>
+
+        <div class="grid">
+            <div class="col" style="background:#fcfcfc; border:1px solid #e2e8f0; padding:12px; border-radius:4px;">
+                <!-- PASO 1: Elegir Rutina -->
+                <label><strong>1. Selecciona tu Rutina:</strong></label><br>
+                <select id="tracking-select-rutina" onchange="alCambiarRutinaEnTracking()" style="width: 100%; font-weight:bold;">
+                    <option value="">-- Elige una rutina --</option>
+                </select>
+                <br><br>
+
+                <!-- PASO 2: Elegir Ejercicio de esa Rutina -->
+                <label><strong>2. Ejercicio de esta Rutina:</strong></label><br>
+                <select id="tracking-select-ejercicio" onchange="cargarHistorialMarcas()" style="width: 100%;">
+                    <option value="">-- Primero selecciona una rutina arriba --</option>
+                </select>
+                <br><br>
+
+                <!-- PASO 3: Registrar Serie / Marca -->
+                <div class="form-row">
+                    <div>
+                        <label>Peso (kg):</label><br>
+                        <input type="number" id="marca-peso" value="100" step="0.5" style="width:100px;">
+                    </div>
+                    <div>
+                        <label>Reps logradas:</label><br>
+                        <input type="number" id="marca-reps" value="10" style="width:90px;">
+                    </div>
+                    <div>
+                        <label>RPE (1-10):</label><br>
+                        <input type="number" id="marca-rpe" value="8.5" step="0.5" style="width:80px;">
+                    </div>
+                </div>
+
+                <button class="success" onclick="guardarMarca()" style="width:100%; margin-top:8px;">
+                    💾 Guardar Marca (Serie)
+                </button>
+                <div id="marca-status" style="margin-top:6px;"></div>
+            </div>
+
+            <!-- HISTORIAL EN VIVO -->
+            <div class="col">
+                <strong>📈 Historial de Marcas y 1RM del Ejercicio Seleccionado:</strong>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Peso</th>
+                            <th>Reps</th>
+                            <th>RPE</th>
+                            <th>1RM Estimado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-marcas">
+                        <tr><td colspan="5" style="text-align:center; color:#888;">Elige una rutina y ejercicio para ver su historial</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = '/api/v1';
+        let accessToken = localStorage.getItem('token') || '';
+        let catalogoEjercicios = [];
+        let misRutinas = [];
+        let maquinasGlobales = [];
+        let musculosGlobales = [];
+        let sesionActivaId = null;
+
+        // Auto login
+        if (accessToken) {
+            document.getElementById('login-form').style.display = 'none';
+            document.getElementById('user-info').style.display = 'block';
+            document.getElementById('user-email').innerText = localStorage.getItem('userEmail') || 'Usuario Conectado';
+            inicializarDatos();
+        }
+
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            const res = await fetch(`${API_URL}/auth/login/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                accessToken = data.access;
+                localStorage.setItem('token', accessToken);
+                localStorage.setItem('userEmail', email);
+                document.getElementById('login-form').style.display = 'none';
+                document.getElementById('user-info').style.display = 'block';
+                document.getElementById('user-email').innerText = email;
+                inicializarDatos();
+            } else {
+                alert('Error al iniciar sesión. Revisa las credenciales.');
+            }
+        }
+
+        function logout() {
+            localStorage.clear();
+            accessToken = '';
+            location.reload();
+        }
+
+        function getHeaders() {
+            return {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`
+            };
+        }
+
+        async function inicializarDatos() {
+            await cargarMaquinasYMusculos();
+            await cargarEjercicios();
+            await cargarRutinas();
+        }
+
+        // --- MÁQUINAS Y MÚSCULOS PARA FORMULARIO DE NUEVO EJERCICIO ---
+        async function cargarMaquinasYMusculos() {
+            try {
+                const resEq = await fetch(`${API_URL}/catalog/equipment/`);
+                const dataEq = await resEq.json();
+                maquinasGlobales = dataEq.results || dataEq;
+
+                const resMus = await fetch(`${API_URL}/catalog/muscles/`);
+                const dataMus = await resMus.json();
+                musculosGlobales = dataMus.results || dataMus;
+
+                const selectEq = document.getElementById('nuevo-ex-maquina');
+                selectEq.innerHTML = '<option value="">-- Sin Máquina / Peso Libre --</option>';
+                maquinasGlobales.forEach(m => {
+                    selectEq.innerHTML += `<option value="${m.id}">${m.name} (${m.brand || 'Genérica'})</option>`;
+                });
+
+                const selectMus = document.getElementById('nuevo-ex-musculo');
+                selectMus.innerHTML = '<option value="">-- Músculo Principal --</option>';
+                musculosGlobales.forEach(m => {
+                    selectMus.innerHTML += `<option value="${m.id}">${m.name} (${m.body_part})</option>`;
+                });
+            } catch(e) {
+                console.error('Error cargando máquinas/músculos:', e);
+            }
+        }
+
+        // --- CATÁLOGO DE EJERCICIOS ---
+        async function cargarEjercicios() {
+            const res = await fetch(`${API_URL}/catalog/exercises/`);
+            const data = await res.json();
+            catalogoEjercicios = data.results || data;
+
+            const lista = document.getElementById('lista-ejercicios');
+            lista.innerHTML = '';
+
+            catalogoEjercicios.forEach(ex => {
+                const li = document.createElement('li');
+                li.style.margin = '4px 0';
+                li.innerHTML = `<a href="javascript:void(0)" onclick="verDetalleEjercicio('${ex.id}')" style="color:#0066cc; font-weight:600;">${ex.name}</a> 
+                    <span style="color:#666; font-size:12px;">(${ex.equipment_name || 'Sin máquina'}) - ${ex.primary_muscle || ''}</span>`;
+                lista.appendChild(li);
+            });
+        }
+
+        async function crearNuevoEjercicio() {
+            if (!accessToken) return alert('Debes iniciar sesión primero');
+
+            const name = document.getElementById('nuevo-ex-nombre').value.trim();
+            if (!name) return alert('Por favor escribe el nombre del ejercicio');
+
+            const equipment_id = document.getElementById('nuevo-ex-maquina').value || null;
+            const muscle_id = document.getElementById('nuevo-ex-musculo').value || null;
+            const mechanics = document.getElementById('nuevo-ex-mecanica').value;
+            const difficulty = document.getElementById('nuevo-ex-dificultad').value;
+            const instructions = document.getElementById('nuevo-ex-instrucciones').value.trim() || 'Ejecución estándar controlada.';
+            const video_url = document.getElementById('nuevo-ex-video').value.trim();
+
+            const payload = {
+                name,
+                equipment_id: equipment_id ? parseInt(equipment_id) : null,
+                muscle_id: muscle_id ? parseInt(muscle_id) : null,
+                mechanics,
+                difficulty,
+                instructions,
+                video_url
+            };
+
+            const res = await fetch(`${API_URL}/catalog/exercises/`, {
+                method: 'POST',
+                headers: getHeaders(),
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                alert(`¡Ejercicio "${name}" agregado con éxito al catálogo!`);
+                document.getElementById('nuevo-ex-nombre').value = '';
+                document.getElementById('nuevo-ex-instrucciones').value = '';
+                document.getElementById('nuevo-ex-video').value = '';
+                await cargarEjercicios();
+                verDetalleEjercicio((await res.json()).id);
+            } else {
+                const err = await res.json();
+                alert('Error al guardar: ' + JSON.stringify(err));
+            }
+        }
+
+        async function verDetalleEjercicio(id) {
+            const res = await fetch(`${API_URL}/catalog/exercises/${id}/`);
+            const ex = await res.json();
+
+            document.getElementById('detalle-ejercicio').style.display = 'block';
+            document.getElementById('det-nombre').innerText = ex.name;
+            document.getElementById('det-maquina').innerText = ex.equipment ? `${ex.equipment.name} (${ex.equipment.brand || 'Estándar'})` : 'Sin máquina';
+            
+            const musculos = (ex.muscles && ex.muscles.length > 0) ? ex.muscles.map(m => m.muscle_name).join(', ') : 'No especificado';
+            document.getElementById('det-musculo').innerText = musculos;
+            document.getElementById('det-instrucciones').innerText = ex.instructions || 'Sin instrucciones cargadas.';
+
+            const mediaBox = document.getElementById('det-multimedia');
+            mediaBox.innerHTML = '<strong>Multimedia / Demostración:</strong><br>';
+
+            if (ex.media && ex.media.length > 0) {
+                ex.media.forEach(m => {
+                    const url = m.external_url || m.file;
+                    if (!url) return;
+
+                    // Si es YouTube, incrustar reproductor iframe
+                    if (url.includes('youtube.com') || url.includes('youtu.be')) {
+                        let videoId = '';
+                        if (url.includes('youtu.be/')) videoId = url.split('youtu.be/')[1].split('?')[0];
+                        else if (url.includes('v=')) videoId = url.split('v=')[1].split('&')[0];
+                        
+                        mediaBox.innerHTML += `<iframe width="100%" height="220" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allowfullscreen style="margin-top:6px; border-radius:4px;"></iframe>`;
+                    } else if (url.endsWith('.mp4') || url.endsWith('.webm') || m.media_type === 'video') {
+                        mediaBox.innerHTML += `<video controls src="${url}" style="width:100%; max-height:240px; margin-top:6px;"></video>`;
+                    } else {
+                        mediaBox.innerHTML += `<img src="${url}" alt="${ex.name}" style="max-height:200px; border-radius:4px; margin-top:6px;">`;
+                    }
+                });
+            } else {
+                mediaBox.innerHTML += '<em>(Sin video o imagen asignada aún para este ejercicio)</em>';
+            }
+        }
+
+        // --- RUTINAS DEL USUARIO ---
+        async function cargarRutinas() {
+            if (!accessToken) return;
+            const res = await fetch(`${API_URL}/routines/routines/`, { headers: getHeaders() });
+            const data = await res.json();
+            misRutinas = data.results || data;
+
+            const contenedor = document.getElementById('lista-rutinas');
+            contenedor.innerHTML = '';
+
+            // Llenar también el selector en la sección 4 (Tracking)
+            const trackingSelect = document.getElementById('tracking-select-rutina');
+            trackingSelect.innerHTML = '<option value="">-- Elige una rutina --</option>';
+
+            if (misRutinas.length === 0) {
+                contenedor.innerHTML = '<em>No tienes rutinas creadas aún. Crea una arriba.</em>';
+                return;
+            }
+
+            misRutinas.forEach(r => {
+                // Agregar al selector de Tracking
+                trackingSelect.innerHTML += `<option value="${r.id}">${r.title}</option>`;
+
+                // Renderizar tarjeta de rutina
+                const card = document.createElement('div');
+                card.className = 'routine-card';
+
+                // Recopilar ejercicios ya agregados a esta rutina
+                let ejerciciosHtml = '';
+                if (r.days && r.days.length > 0) {
+                    r.days.forEach(d => {
+                        if (d.exercises && d.exercises.length > 0) {
+                            d.exercises.forEach(e => {
+                                const setsInfo = e.target_sets && e.target_sets.length > 0 
+                                    ? `${e.target_sets.length} series (${e.target_sets[0].min_reps}-${e.target_sets[0].max_reps} reps)` 
+                                    : '3 series';
+                                ejerciciosHtml += `<div class="exercise-item">
+                                    <strong>✓ ${e.exercise_detail.name}</strong> - <span style="color:#555;">${setsInfo} | Descanso: ${e.rest_seconds}s</span>
+                                </div>`;
+                            });
+                        }
+                    });
+                }
+
+                if (!ejerciciosHtml) {
+                    ejerciciosHtml = '<div style="color:#888; font-size:12px; margin:4px 0;">(Aún no has agregado ejercicios a esta rutina)</div>';
+                }
+
+                // Generar opciones de ejercicios del catálogo para el dropdown
+                let optionsEx = catalogoEjercicios.map(ex => `<option value="${ex.id}">${ex.name}</option>`).join('');
+
+                card.innerHTML = `
+                    <div style="font-size:15px; font-weight:bold; color:#222;">📋 ${r.title}</div>
+                    
+                    <div style="margin-top:6px;">
+                        <strong>Ejercicios en esta rutina:</strong>
+                        ${ejerciciosHtml}
+                    </div>
+
+                    <!-- FORMULARIO PARA AGREGAR EJERCICIO DEL CATÁLOGO A ESTA RUTINA -->
+                    <div style="margin-top:10px; background:#f8fafc; border:1px solid #e2e8f0; padding:8px; border-radius:4px;">
+                        <span style="font-size:12px; font-weight:bold; color:#0066cc;">+ Agregar Ejercicio del Catálogo a "${r.title}":</span>
+                        <div class="form-row" style="margin-top:4px;">
+                            <select id="select-ex-para-${r.id}" style="flex:2;">
+                                ${optionsEx}
+                            </select>
+                            <input type="number" id="sets-para-${r.id}" value="3" placeholder="Series" title="Series" style="width:60px;">
+                            <input type="number" id="minreps-para-${r.id}" value="8" placeholder="Min" title="Reps mínimas" style="width:50px;">
+                            <input type="number" id="maxreps-para-${r.id}" value="12" placeholder="Max" title="Reps máximas" style="width:50px;">
+                            <button onclick="agregarEjercicioARutina('${r.id}')" style="font-size:12px; padding:4px 8px;">Agregar</button>
+                        </div>
+                    </div>
+                `;
+                contenedor.appendChild(card);
+            });
+        }
+
+        async function crearRutina() {
+            const title = document.getElementById('nueva-rutina-titulo').value.trim();
+            if (!title) return alert('Escribe el nombre de la rutina (ej. Lunes-Pecho)');
+
+            const res = await fetch(`${API_URL}/routines/routines/`, {
+                method: 'POST',
+                headers: getHeaders(),
+                body: JSON.stringify({ title, description: 'Rutina personalizada' })
+            });
+
+            if (res.ok) {
+                document.getElementById('nueva-rutina-titulo').value = '';
+                await cargarRutinas();
+            } else {
+                alert('Error al crear rutina. Inicia sesión primero.');
+            }
+        }
+
+        async function agregarEjercicioARutina(rutinaId) {
+            const exercise_id = document.getElementById(`select-ex-para-${rutinaId}`).value;
+            const sets_count = parseInt(document.getElementById(`sets-para-${rutinaId}`).value) || 3;
+            const min_reps = parseInt(document.getElementById(`minreps-para-${rutinaId}`).value) || 8;
+            const max_reps = parseInt(document.getElementById(`maxreps-para-${rutinaId}`).value) || 12;
+
+            const res = await fetch(`${API_URL}/routines/routines/${rutinaId}/add-exercise/`, {
+                method: 'POST',
+                headers: getHeaders(),
+                body: JSON.stringify({
+                    exercise_id,
+                    sets_count,
+                    min_reps,
+                    max_reps,
+                    rest_seconds: 90
+                })
+            });
+
+            if (res.ok) {
+                await cargarRutinas();
+                // Si la rutina que se modificó está seleccionada en tracking, refrescar también
+                const trackingSel = document.getElementById('tracking-select-rutina');
+                if (trackingSel.value === rutinaId) {
+                    alCambiarRutinaEnTracking();
+                }
+            } else {
+                alert('Error al agregar ejercicio a la rutina.');
+            }
+        }
+
+        // --- 4. TRACKING / MARCAS (RUTINA -> EJERCICIOS DE LA RUTINA -> PESO Y REPS) ---
+        function alCambiarRutinaEnTracking() {
+            const rutinaId = document.getElementById('tracking-select-rutina').value;
+            const selectEx = document.getElementById('tracking-select-ejercicio');
+            selectEx.innerHTML = '';
+
+            if (!rutinaId) {
+                selectEx.innerHTML = '<option value="">-- Primero selecciona una rutina arriba --</option>';
+                document.getElementById('tabla-marcas').innerHTML = '<tr><td colspan="5" style="text-align:center; color:#888;">Elige una rutina y ejercicio para ver su historial</td></tr>';
+                return;
+            }
+
+            const rutina = misRutinas.find(r => r.id === rutinaId);
+            if (!rutina || !rutina.days || rutina.days.length === 0) {
+                selectEx.innerHTML = '<option value="">(Esta rutina no tiene ejercicios agregados)</option>';
+                return;
+            }
+
+            let tieneEjercicios = false;
+            rutina.days.forEach(d => {
+                if (d.exercises && d.exercises.length > 0) {
+                    tieneEjercicios = true;
+                    d.exercises.forEach(e => {
+                        selectEx.innerHTML += `<option value="${e.exercise}">${e.exercise_detail.name}</option>`;
+                    });
+                }
+            });
+
+            if (!tieneEjercicios) {
+                selectEx.innerHTML = '<option value="">(Esta rutina no tiene ejercicios agregados aún)</option>';
+                document.getElementById('tabla-marcas').innerHTML = '<tr><td colspan="5" style="text-align:center; color:#888;">Agrega ejercicios a esta rutina arriba</td></tr>';
+            } else {
+                cargarHistorialMarcas();
+            }
+        }
+
+        async function asegurarSesionActiva() {
+            if (sesionActivaId) return sesionActivaId;
+            const res = await fetch(`${API_URL}/tracking/sessions/`, {
+                method: 'POST',
+                headers: getHeaders(),
+                body: JSON.stringify({
+                    title: 'Entrenamiento en Curso',
+                    start_time: new Date().toISOString()
+                })
+            });
+            const ses = await res.json();
+            sesionActivaId = ses.id;
+            return sesionActivaId;
+        }
+
+        async function guardarMarca() {
+            if (!accessToken) return alert('Debes iniciar sesión');
+            const exerciseId = document.getElementById('tracking-select-ejercicio').value;
+            if (!exerciseId) return alert('Selecciona un ejercicio de tu rutina.');
+
+            const weight = parseFloat(document.getElementById('marca-peso').value);
+            const reps = parseInt(document.getElementById('marca-reps').value);
+            const rpe = parseFloat(document.getElementById('marca-rpe').value) || null;
+
+            if (isNaN(weight) || isNaN(reps)) return alert('Ingresa peso y repeticiones válidos');
+
+            const sessionId = await asegurarSesionActiva();
+
+            // 1. Vincular ejercicio a la sesión
+            const exRes = await fetch(`${API_URL}/tracking/exercises/`, {
+                method: 'POST',
+                headers: getHeaders(),
+                body: JSON.stringify({ session: sessionId, exercise: exerciseId, order: 1 })
+            });
+            const loggedEx = await exRes.json();
+
+            // 2. Registrar serie (marca)
+            const setRes = await fetch(`${API_URL}/tracking/sets/`, {
+                method: 'POST',
+                headers: getHeaders(),
+                body: JSON.stringify({
+                    log_exercise: loggedEx.id,
+                    set_number: 1,
+                    weight: weight,
+                    reps: reps,
+                    rpe: rpe
+                })
+            });
+
+            if (setRes.ok) {
+                const setSaved = await setRes.json();
+                document.getElementById('marca-status').innerHTML = `<span style="color:#28a745; font-weight:bold;">✓ ¡Marca guardada! (${weight}kg x ${reps} reps | 1RM: ${setSaved.estimated_1rm}kg)</span>`;
+                await cargarHistorialMarcas();
+            } else {
+                alert('Error al guardar la marca.');
+            }
+        }
+
+        async function cargarHistorialMarcas() {
+            if (!accessToken) return;
+            const exerciseId = document.getElementById('tracking-select-ejercicio').value;
+            if (!exerciseId) return;
+
+            const res = await fetch(`${API_URL}/tracking/progression/${exerciseId}/`, { headers: getHeaders() });
+            const data = await res.json();
+            const tbody = document.getElementById('tabla-marcas');
+            tbody.innerHTML = '';
+
+            if (!data.history || data.history.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#888;">No hay marcas registradas para este ejercicio todavía. ¡Guarda tu primera serie a la izquierda!</td></tr>';
+                return;
+            }
+
+            data.history.forEach(item => {
+                const tr = document.createElement('tr');
+                const fecha = new Date(item.logged_at).toLocaleDateString() + ' ' + new Date(item.logged_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                const oneRm = (item.reps > 0 && item.reps < 37) ? (item.weight * (36 / (37 - item.reps))).toFixed(1) : item.weight;
+
+                tr.innerHTML = `
+                    <td>${fecha}</td>
+                    <td><strong>${item.weight} kg</strong></td>
+                    <td>${item.reps}</td>
+                    <td>${item.rpe || '-'}</td>
+                    <td><span class="badge">${oneRm} kg</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+    </script>
+</body>
+</html>

@@ -47,10 +47,11 @@ class RoutineDaySerializer(serializers.ModelSerializer):
 
 class RoutineListSerializer(serializers.ModelSerializer):
     days_count = serializers.IntegerField(source='days.count', read_only=True)
+    days = RoutineDaySerializer(many=True, read_only=True)
 
     class Meta:
         model = Routine
-        fields = ('id', 'title', 'description', 'is_template', 'is_active', 'days_count', 'created_at')
+        fields = ('id', 'title', 'description', 'is_template', 'is_active', 'days_count', 'days', 'created_at')
 
 
 class RoutineDetailSerializer(serializers.ModelSerializer):

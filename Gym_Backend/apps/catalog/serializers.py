@@ -57,14 +57,36 @@ class ExerciseDetailSerializer(serializers.ModelSerializer):
     equipment_id = serializers.PrimaryKeyRelatedField(
         queryset=Equipment.objects.all(), source='equipment', write_only=True, required=False, allow_null=True
     )
+    muscle_id = serializers.PrimaryKeyRelatedField(
+        queryset=MuscleGroup.objects.all(), write_only=True, required=False, allow_null=True
+    )
+    video_url = serializers.URLField(write_only=True, required=False, allow_blank=True)
     muscles = ExerciseMuscleSerializer(source='exercise_muscles', many=True, read_only=True)
     media = ExerciseMediaSerializer(many=True, read_only=True)
 
     class Meta:
         model = Exercise
         fields = (
-            'id', 'name', 'slug', 'equipment', 'equipment_id', 'muscles', 
+            'id', 'name', 'slug', 'equipment', 'equipment_id', 'muscle_id', 'video_url', 'muscles', 
             'mechanics', 'difficulty', 'instructions', 'tips', 'media', 
             'created_at', 'updated_at'
         )
+
+    def create(self, validated_data):
+        video_url = validated_data.pop('video_url', None)
+        muscle = validated_data.pop('muscle_id', None)
+        exercise = Exercise.objects.create(**validated_data)
+
+        if muscle:
+            ExerciseMuscle.objects.create(exercise=exercise, muscle=muscle, role='primary')
+
+        if video_url:
+            ExerciseMedia.objects.create(
+                exercise=exercise,
+                media_type='video',
+                external_url=video_url,
+                title='Demostración en video'
+            )
+
+        return exercise
 
