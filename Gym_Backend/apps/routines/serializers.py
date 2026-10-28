@@ -51,17 +51,42 @@ class RoutineListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Routine
-        fields = ('id', 'title', 'description', 'is_template', 'is_active', 'days_count', 'days', 'created_at')
-
+        fields = (
+            'id',
+            'title',
+            'focus',
+            'description',
+            'is_template',
+            'is_active',
+            'days_count',
+            'days',
+            'created_at'
+        )
 
 class RoutineDetailSerializer(serializers.ModelSerializer):
     days = RoutineDaySerializer(many=True, read_only=True)
 
     class Meta:
         model = Routine
-        fields = ('id', 'user', 'title', 'description', 'is_template', 'is_active', 'days', 'created_at', 'updated_at')
-        read_only_fields = ('id', 'user', 'created_at', 'updated_at')
+        fields = (
+            'id',
+            'user',
+            'title',
+            'focus',
+            'description',
+            'is_template',
+            'is_active',
+            'days',
+            'created_at',
+            'updated_at'
+        )
 
+        read_only_fields = (
+            'id',
+            'user',
+            'created_at',
+            'updated_at'
+        )
     def create(self, validated_data):
         user = self.context['request'].user
         validated_data['user'] = user

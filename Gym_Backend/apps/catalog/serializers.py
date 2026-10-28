@@ -35,10 +35,23 @@ class ExerciseListSerializer(serializers.ModelSerializer):
     equipment_name = serializers.CharField(source='equipment.name', read_only=True)
     primary_muscle = serializers.SerializerMethodField()
     thumbnail = serializers.SerializerMethodField()
+    muscles = ExerciseMuscleSerializer(
+    source='exercise_muscles',
+    many=True,
+    read_only=True)
 
     class Meta:
         model = Exercise
-        fields = ('id', 'name', 'slug', 'difficulty', 'mechanics', 'equipment_name', 'primary_muscle', 'thumbnail')
+        fields = (
+    'id',
+    'name',
+    'slug',
+    'difficulty',
+    'mechanics',
+    'equipment_name',
+    'primary_muscle',
+    'muscles',
+    'thumbnail')
 
     def get_primary_muscle(self, obj):
         primary = obj.exercise_muscles.filter(role='primary').first()
