@@ -103,3 +103,24 @@ class ExerciseDetailSerializer(serializers.ModelSerializer):
 
         return exercise
 
+    def update(self, instance, validated_data):
+        video_url = validated_data.pop('video_url', None)
+        muscle = validated_data.pop('muscle_id', None)
+        instance = super().update(instance, validated_data)
+
+        if muscle:
+            ExerciseMuscle.objects.update_or_create(
+                exercise=instance,
+                role='primary',
+                defaults={'muscle': muscle}
+            )
+
+        if video_url is not None:
+            ExerciseMedia.objects.update_or_create(
+                exercise=instance,
+                media_type='video',
+                defaults={'external_url': video_url, 'title': 'Demostración en video'}
+            )
+
+        return instance
+
