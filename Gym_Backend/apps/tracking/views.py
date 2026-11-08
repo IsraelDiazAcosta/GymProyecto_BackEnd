@@ -59,6 +59,13 @@ class WorkoutSetLogViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         set_log = serializer.save()
         # Verificar y actualizar récord personal (PR)
+        self._update_pr(set_log)
+
+    def perform_update(self, serializer):
+        set_log = serializer.save()
+        self._update_pr(set_log)
+
+    def _update_pr(self, set_log):
         exercise = set_log.log_exercise.exercise
         user = self.request.user
 
@@ -86,7 +93,7 @@ class ExerciseProgressionView(APIView):
             log_exercise__exercise_id=exercise_id,
             is_completed=True
         ).order_by('logged_at').values(
-            'logged_at', 'weight', 'reps', 'rpe', 'set_type'
+            'id', 'logged_at', 'weight', 'reps', 'rpe', 'set_type'
         )
 
         prs = PersonalRecord.objects.filter(
