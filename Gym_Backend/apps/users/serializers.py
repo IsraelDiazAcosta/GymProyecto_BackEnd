@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from apps.catalog.models import Equipment
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .models import User
 
@@ -23,10 +24,33 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
+    favorite_equipment = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=Equipment.objects.all(),
+        required=False
+    )
+
     class Meta:
         model = User
-        fields = ('id', 'email', 'username', 'avatar', 'experience_level', 'current_weight', 'height', 'bio', 'is_staff', 'date_joined')
-        read_only_fields = ('id', 'email', 'is_staff', 'date_joined')
+        fields = (
+            'id',
+            'email',
+            'username',
+            'avatar',
+            'experience_level',
+            'current_weight',
+            'height',
+            'bio',
+            'favorite_equipment',
+            'is_staff',
+            'date_joined'
+        )
+        read_only_fields = (
+            'id',
+            'email',
+            'is_staff',
+            'date_joined'
+        )
 
 
 class AdminUserListSerializer(serializers.ModelSerializer):
