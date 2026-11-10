@@ -1,5 +1,5 @@
 import uuid
-from apps.catalog.models import Equipment
+from apps.catalog.models import Equipment, Exercise
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
 
@@ -63,11 +63,12 @@ class User(AbstractUser):
         verbose_name='Estatura (cm)'
     )
     bio = models.TextField(blank=True, verbose_name='Biografía / Objetivos')
-    favorite_equipment = models.ManyToManyField(
-    Equipment,
+    favorite_exercises = models.ManyToManyField(
+    Exercise,
     blank=True,
     related_name="favorited_by_users",
-    verbose_name="Máquinas favoritas")
+    verbose_name="Ejercicios favoritos"
+)
 
     objects = CustomUserManager()
 

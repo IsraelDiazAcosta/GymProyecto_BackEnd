@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from apps.catalog.models import Equipment
+from apps.catalog.models import Exercise
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .models import User
 
@@ -24,11 +24,11 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
-    favorite_equipment = serializers.PrimaryKeyRelatedField(
-        many=True,
-        queryset=Equipment.objects.all(),
-        required=False
-    )
+    favorite_exercises = serializers.PrimaryKeyRelatedField(
+    many=True,
+    queryset=Exercise.objects.all(),
+    required=False
+)
 
     class Meta:
         model = User
@@ -41,7 +41,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'current_weight',
             'height',
             'bio',
-            'favorite_equipment',
+            'favorite_exercises',
             'is_staff',
             'date_joined'
         )
