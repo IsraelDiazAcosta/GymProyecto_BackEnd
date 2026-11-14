@@ -47,7 +47,7 @@ class RoutineDay(models.Model):
 class RoutineExercise(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     routine_day = models.ForeignKey(RoutineDay, on_delete=models.CASCADE, related_name='exercises')
-    exercise = models.ForeignKey(Exercise, on_delete=models.PROTECT, related_name='routine_placements')
+    exercise = models.ForeignKey(Exercise, on_delete=models.CASCADE, related_name='routine_placements')
     order = models.PositiveSmallIntegerField(default=1, verbose_name='Orden del ejercicio')
     rest_seconds = models.PositiveIntegerField(default=90, verbose_name='Segundos de descanso recomendados')
     tempo = models.CharField(max_length=20, blank=True, verbose_name='Tempo (ej. 3-1-1-0)')

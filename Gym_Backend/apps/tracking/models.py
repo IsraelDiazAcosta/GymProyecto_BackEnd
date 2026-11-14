@@ -1,16 +1,31 @@
 import uuid
 from django.db import models
 from django.conf import settings
+from django.utils import timezone
 from apps.catalog.models import Exercise
-from apps.routines.models import RoutineDay
+from apps.routines.models import Routine, RoutineDay
 
 class WorkoutSession(models.Model):
+    STATUS_CHOICES = [
+        ('active', 'Activa'),
+        ('completed', 'Completada'),
+        ('cancelled', 'Cancelada'),
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='workout_sessions',
         verbose_name='Usuario'
+    )
+    routine = models.ForeignKey(
+        Routine,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='workout_sessions',
+        verbose_name='Rutina'
     )
     routine_day = models.ForeignKey(
         RoutineDay,
@@ -21,8 +36,15 @@ class WorkoutSession(models.Model):
         verbose_name='Día de rutina base'
     )
     title = models.CharField(max_length=150, blank=True, verbose_name='Título de la sesión')
-    start_time = models.DateTimeField(verbose_name='Hora de inicio')
+    start_time = models.DateTimeField(default=timezone.now, verbose_name='Hora de inicio')
     end_time = models.DateTimeField(null=True, blank=True, verbose_name='Hora de finalización')
+    duration_seconds = models.PositiveIntegerField(null=True, blank=True, verbose_name='Duración en segundos')
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='active',
+        verbose_name='Estado de la sesión'
+    )
     perceived_effort_rpe = models.DecimalField(
         max_digits=3, 
         decimal_places=1, 
@@ -32,6 +54,22 @@ class WorkoutSession(models.Model):
     )
     notes = models.TextField(blank=True, verbose_name='Sensaciones y notas del entrenamiento')
     is_completed = models.BooleanField(default=False, verbose_name='Sesión completada')
+
+    @property
+    def started_at(self):
+        return self.start_time
+
+    @started_at.setter
+    def started_at(self, value):
+        self.start_time = value
+
+    @property
+    def ended_at(self):
+        return self.end_time
+
+    @ended_at.setter
+    def ended_at(self, value):
+        self.end_time = value
 
     class Meta:
         verbose_name = 'Sesión de Entrenamiento'
@@ -45,7 +83,7 @@ class WorkoutSession(models.Model):
 class WorkoutLogExercise(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     session = models.ForeignKey(WorkoutSession, on_delete=models.CASCADE, related_name='logged_exercises')
-    exercise = models.ForeignKey(Exercise, on_delete=models.PROTECT, related_name='logged_workouts')
+    exercise = models.ForeignKey(Exercise, on_delete=models.CASCADE, related_name='logged_workouts')
     order = models.PositiveSmallIntegerField(default=1, verbose_name='Orden en la sesión')
     notes = models.TextField(blank=True, verbose_name='Notas del ejercicio')
 

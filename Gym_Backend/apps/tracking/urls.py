@@ -5,6 +5,7 @@ from .views import (
     WorkoutLogExerciseViewSet,
     WorkoutSetLogViewSet,
     ExerciseProgressionView,
+    Weight1RMProgressView,
 )
 
 router = DefaultRouter()
@@ -13,7 +14,9 @@ router.register(r'exercises', WorkoutLogExerciseViewSet, basename='workout-exerc
 router.register(r'sets', WorkoutSetLogViewSet, basename='workout-sets')
 
 urlpatterns = [
+    path('sessions/finish/', WorkoutSessionViewSet.as_view({'post': 'finish_active'}), name='workout-sessions-finish-active'),
     path('', include(router.urls)),
     path('progression/<uuid:exercise_id>/', ExerciseProgressionView.as_view(), name='exercise-progression'),
+    path('progress/weight-1rm/', Weight1RMProgressView.as_view(), name='weight-1rm-progress'),
 ]
 

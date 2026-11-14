@@ -3,10 +3,11 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import User
+from .models import User, BodyWeightLog
 from .serializers import (
     UserRegistrationSerializer,
     UserProfileSerializer,
+    BodyWeightLogSerializer,
     AdminUserListSerializer,
     CustomTokenObtainPairSerializer,
 )
@@ -50,4 +51,20 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
 
     def get_object(self):
         return self.request.user
+
+
+class BodyWeightLogListCreateView(generics.ListCreateAPIView):
+    serializer_class = BodyWeightLogSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return BodyWeightLog.objects.filter(user=self.request.user).order_by('-date', '-id')
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+        latest = BodyWeightLog.objects.filter(user=self.request.user).order_by('-date', '-id').first()
+        if latest:
+            self.request.user.current_weight = latest.weight
+            self.request.user.save(update_fields=['current_weight'])
+
 

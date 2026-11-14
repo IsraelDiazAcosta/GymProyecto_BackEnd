@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from .models import User
+from .models import User, BodyWeightLog
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=6)
@@ -8,7 +8,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('id', 'email', 'username', 'password', 'password_confirm', 'experience_level', 'current_weight', 'height')
+        fields = ('id', 'email', 'username', 'password', 'password_confirm', 'experience_level', 'training_goal', 'current_weight', 'height')
         read_only_fields = ('id',)
 
     def validate(self, attrs):
@@ -25,8 +25,17 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('id', 'email', 'username', 'avatar', 'experience_level', 'current_weight', 'height', 'bio', 'is_staff', 'date_joined')
+        fields = ('id', 'email', 'username', 'avatar', 'experience_level', 'training_goal', 'current_weight', 'height', 'bio', 'is_staff', 'date_joined')
         read_only_fields = ('id', 'email', 'is_staff', 'date_joined')
+
+
+class BodyWeightLogSerializer(serializers.ModelSerializer):
+    weight = serializers.DecimalField(max_digits=5, decimal_places=2, min_value=1)
+
+    class Meta:
+        model = BodyWeightLog
+        fields = ('id', 'weight', 'date', 'created_at')
+        read_only_fields = ('id', 'created_at')
 
 
 class AdminUserListSerializer(serializers.ModelSerializer):
@@ -37,7 +46,7 @@ class AdminUserListSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = (
-            'id', 'email', 'username', 'experience_level', 
+            'id', 'email', 'username', 'experience_level', 'training_goal',
             'current_weight', 'height', 'is_staff', 'is_active', 
             'routines_count', 'workouts_count', 'date_joined'
         )

@@ -1,7 +1,10 @@
+from django.db import transaction
+from django.db.models import Q
+from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from django.db.models import Q
+from apps.catalog.models import Exercise
 from .models import Routine, RoutineDay, RoutineExercise, RoutineSet
 from .serializers import (
     RoutineListSerializer,
@@ -26,46 +29,66 @@ class RoutineViewSet(viewsets.ModelViewSet):
             Q(user=user) | Q(is_template=True)
         ).prefetch_related('days__exercises__target_sets', 'days__exercises__exercise')
 
+    @staticmethod
+    def _extract_exercise_ids(data):
+        """Obtiene la lista de UUIDs de ejercicios aceptando exercise_ids, exercise_id o exercise."""
+        raw_ids = data.get('exercise_ids')
+        single_id = data.get('exercise_id') or data.get('exercise')
+        if isinstance(raw_ids, list) and raw_ids:
+            return [eid for eid in raw_ids if eid]
+        if single_id:
+            return [single_id]
+        return []
+
+    @staticmethod
+    def _add_exercises_to_day(day, ids_to_add, data):
+        """Crea RoutineExercise y RoutineSet para los ejercicios indicados en un día de rutina."""
+        sets_count = int(data.get('sets_count', 4) or 4)
+        min_reps = int(data.get('min_reps', 8) or 8)
+        max_reps = int(data.get('max_reps', 12) or 12)
+        rest_seconds = int(data.get('rest_seconds', 90) or 90)
+        notes = data.get('notes', '') or ''
+        next_order = day.exercises.count() + 1
+
+        for eid in ids_to_add:
+            exercise = get_object_or_404(Exercise, pk=eid)
+            routine_ex = RoutineExercise.objects.create(
+                routine_day=day,
+                exercise=exercise,
+                order=next_order,
+                rest_seconds=rest_seconds,
+                notes=notes,
+            )
+            next_order += 1
+            for s in range(1, sets_count + 1):
+                RoutineSet.objects.create(
+                    routine_exercise=routine_ex,
+                    set_number=s,
+                    min_reps=min_reps,
+                    max_reps=max_reps,
+                )
+
     def perform_create(self, serializer):
-        routine = serializer.save(user=self.request.user)
-        RoutineDay.objects.create(routine=routine, name='Día 1', order=1)
+        with transaction.atomic():
+            routine = serializer.save(user=self.request.user)
+            day = RoutineDay.objects.create(routine=routine, name='Día 1', order=1)
+            ids_to_add = self._extract_exercise_ids(self.request.data)
+            if ids_to_add:
+                self._add_exercises_to_day(day, ids_to_add, self.request.data)
 
     @action(detail=True, methods=['post'], url_path='add-exercise')
     def add_exercise(self, request, pk=None):
-        """Agrega un ejercicio del catálogo a la rutina con sus series y repeticiones objetivo."""
-        from django.shortcuts import get_object_or_404
-        from apps.catalog.models import Exercise
+        """Agrega uno o más ejercicios del catálogo a la rutina con sus series y repeticiones objetivo."""
+        with transaction.atomic():
+            routine = self.get_object()
+            day = routine.days.first()
+            if not day:
+                day = RoutineDay.objects.create(routine=routine, name='Día 1', order=1)
 
-        routine = self.get_object()
-        exercise_id = request.data.get('exercise_id')
-        sets_count = int(request.data.get('sets_count', 3))
-        min_reps = int(request.data.get('min_reps', 8))
-        max_reps = int(request.data.get('max_reps', 12))
-        rest_seconds = int(request.data.get('rest_seconds', 90))
-        notes = request.data.get('notes', '')
+            ids_to_add = self._extract_exercise_ids(request.data) or [None]
+            self._add_exercises_to_day(day, ids_to_add, request.data)
 
-        day = routine.days.first()
-        if not day:
-            day = RoutineDay.objects.create(routine=routine, name='Día 1', order=1)
-
-        exercise = get_object_or_404(Exercise, pk=exercise_id)
-        next_order = day.exercises.count() + 1
-        routine_ex = RoutineExercise.objects.create(
-            routine_day=day,
-            exercise=exercise,
-            order=next_order,
-            rest_seconds=rest_seconds,
-            notes=notes
-        )
-
-        for s in range(1, sets_count + 1):
-            RoutineSet.objects.create(
-                routine_exercise=routine_ex,
-                set_number=s,
-                min_reps=min_reps,
-                max_reps=max_reps
-            )
-
+        routine = self.get_queryset().get(pk=routine.pk)
         return Response(RoutineDetailSerializer(routine, context={'request': request}).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['post'], url_path='clone')
@@ -119,12 +142,19 @@ class RoutineDayViewSet(viewsets.ModelViewSet):
         return RoutineDay.objects.filter(routine__user=self.request.user)
 
 
+class IsRoutineExerciseOwner(permissions.BasePermission):
+    def has_object_permission(self, request, view, obj):
+        return obj.routine_day.routine.user_id == request.user.id
+
+
 class RoutineExerciseViewSet(viewsets.ModelViewSet):
     serializer_class = RoutineExerciseSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsRoutineExerciseOwner]
 
     def get_queryset(self):
-        return RoutineExercise.objects.filter(routine_day__routine__user=self.request.user)
+        return RoutineExercise.objects.filter(
+            routine_day__routine__user=self.request.user
+        ).select_related('exercise', 'routine_day__routine').prefetch_related('target_sets')
 
 
 class RoutineSetViewSet(viewsets.ModelViewSet):
