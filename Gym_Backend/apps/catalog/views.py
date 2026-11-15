@@ -4,7 +4,7 @@ from rest_framework import viewsets, permissions, filters, status
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.response import Response
-from .models import Equipment, MuscleGroup, Exercise, ExerciseMedia, UserFavoriteEquipment
+from .models import Equipment, MuscleGroup, Exercise, ExerciseMedia, UserFavoriteEquipment, UserFavoriteExercise
 from .permissions import IsAdminOrReadOnly
 from .serializers import (
     EquipmentSerializer,
@@ -90,12 +90,21 @@ class ExerciseViewSet(viewsets.ModelViewSet):
         queryset = super().get_queryset()
         user = getattr(self.request, 'user', None)
         if user and user.is_authenticated:
+            queryset = queryset.annotate(
+                is_favorite=Exists(
+                    UserFavoriteExercise.objects.filter(user=user, exercise=OuterRef('pk'))
+                )
+            )
             eq_qs = Equipment.objects.annotate(
                 is_favorite=Exists(
                     UserFavoriteEquipment.objects.filter(user=user, equipment=OuterRef('pk'))
                 )
             )
             queryset = queryset.prefetch_related(Prefetch('equipment', queryset=eq_qs))
+        else:
+            queryset = queryset.annotate(
+                is_favorite=Value(False, output_field=BooleanField())
+            )
         equipment_id = self.request.query_params.get('equipment')
         muscle_id = self.request.query_params.get('muscle')
         difficulty = self.request.query_params.get('difficulty')
@@ -108,6 +117,24 @@ class ExerciseViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(difficulty=difficulty)
 
         return queryset.distinct()
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated], url_path='favorite')
+    def toggle_favorite(self, request, pk=None):
+        exercise = self.get_object()
+        fav, created = UserFavoriteExercise.objects.get_or_create(
+            user=request.user,
+            exercise=exercise
+        )
+        if not created:
+            fav.delete()
+            return Response({'is_favorite': False, 'exercise_id': str(exercise.id)})
+        return Response({'is_favorite': True, 'exercise_id': str(exercise.id)}, status=status.HTTP_201_CREATED)
+
+    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated], url_path='favorites')
+    def list_favorites(self, request):
+        queryset = self.get_queryset().filter(favorited_by__user=request.user)
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
     def perform_destroy(self, instance):
         with transaction.atomic():

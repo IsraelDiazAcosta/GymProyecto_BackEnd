@@ -236,6 +236,29 @@ class UserFavoriteEquipment(models.Model):
         return f"{self.user.email} -> {self.equipment.name}"
 
 
+class UserFavoriteExercise(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='favorite_exercises_set'
+    )
+    exercise = models.ForeignKey(
+        Exercise,
+        on_delete=models.CASCADE,
+        related_name='favorited_by'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Ejercicio Favorito'
+        verbose_name_plural = 'Ejercicios Favoritos'
+        unique_together = ('user', 'exercise')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.email} -> {self.exercise.name}"
+
+
 @receiver(post_delete, sender=Equipment)
 @receiver(post_delete, sender=Exercise)
 def auto_delete_image_on_delete(sender, instance, **kwargs):

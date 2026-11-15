@@ -106,10 +106,11 @@ class ExerciseListSerializer(serializers.ModelSerializer):
     image = serializers.SerializerMethodField()
     image_url = serializers.SerializerMethodField()
     thumbnail = serializers.SerializerMethodField()
+    is_favorite = serializers.BooleanField(read_only=True, default=False)
 
     class Meta:
         model = Exercise
-        fields = ('id', 'name', 'slug', 'difficulty', 'mechanics', 'equipment_name', 'primary_muscle', 'image', 'image_url', 'thumbnail')
+        fields = ('id', 'name', 'slug', 'difficulty', 'mechanics', 'equipment_name', 'primary_muscle', 'is_favorite', 'image', 'image_url', 'thumbnail')
 
     def get_primary_muscle(self, obj):
         primary = obj.exercise_muscles.filter(role='primary').first()
@@ -138,11 +139,12 @@ class ExerciseDetailSerializer(serializers.ModelSerializer):
     image_url = serializers.SerializerMethodField()
     muscles = ExerciseMuscleSerializer(source='exercise_muscles', many=True, read_only=True)
     media = ExerciseMediaSerializer(many=True, read_only=True)
+    is_favorite = serializers.BooleanField(read_only=True, default=False)
 
     class Meta:
         model = Exercise
         fields = (
-            'id', 'name', 'slug', 'image', 'image_url', 'equipment', 'equipment_id', 'muscle_id', 'video_url', 'muscles', 
+            'id', 'name', 'slug', 'image', 'image_url', 'is_favorite', 'equipment', 'equipment_id', 'muscle_id', 'video_url', 'muscles', 
             'mechanics', 'difficulty', 'instructions', 'tips', 'media', 
             'created_at', 'updated_at'
         )
