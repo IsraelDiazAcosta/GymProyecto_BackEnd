@@ -4,11 +4,12 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import User, BodyWeightLog
+from .models import User, BodyWeightLog, UserSettings
 from .serializers import (
     UserRegistrationSerializer,
     UserProfileSerializer,
     BodyWeightLogSerializer,
+    UserSettingsSerializer,
     AdminUserListSerializer,
     CustomTokenObtainPairSerializer,
 )
@@ -71,5 +72,16 @@ class BodyWeightLogListCreateView(generics.ListCreateAPIView):
         if latest:
             self.request.user.current_weight = latest.weight
             self.request.user.save(update_fields=['current_weight'])
+
+
+class UserSettingsView(generics.RetrieveUpdateAPIView):
+    """Retrieve (GET) or update (PATCH) the authenticated user's app preferences."""
+
+    serializer_class = UserSettingsSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        settings_obj, _ = UserSettings.objects.get_or_create(user=self.request.user)
+        return settings_obj
 
 

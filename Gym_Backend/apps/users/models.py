@@ -114,3 +114,58 @@ class BodyWeightLog(models.Model):
         return f"{self.user.email} - {self.weight} kg ({self.date})"
 
 
+class UserSettings(models.Model):
+    """Stores persistent UI appearance and language preferences per user."""
+
+    THEME_MODE_CHOICES = [
+        ('dark', 'Dark'),
+        ('light', 'Light'),
+        ('system', 'System'),
+    ]
+    ACCENT_COLOR_CHOICES = [
+        ('emerald', 'Emerald'),
+        ('ocean', 'Ocean Blue'),
+        ('amber', 'Energy Amber'),
+        ('violet', 'Electric Violet'),
+        ('crimson', 'Crimson Red'),
+    ]
+    LANGUAGE_CHOICES = [
+        ('es', 'Spanish'),
+        ('en', 'English'),
+        ('system', 'System'),
+    ]
+
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name='settings',
+        verbose_name='User',
+    )
+    theme_mode = models.CharField(
+        max_length=10,
+        choices=THEME_MODE_CHOICES,
+        default='dark',
+        verbose_name='Theme mode',
+    )
+    accent_color = models.CharField(
+        max_length=20,
+        choices=ACCENT_COLOR_CHOICES,
+        default='emerald',
+        verbose_name='Accent color',
+    )
+    language = models.CharField(
+        max_length=10,
+        choices=LANGUAGE_CHOICES,
+        default='es',
+        verbose_name='Language',
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'User Settings'
+        verbose_name_plural = 'User Settings'
+
+    def __str__(self):
+        return f"{self.user.email} ({self.theme_mode}/{self.accent_color}/{self.language})"
+
+

@@ -1,5 +1,13 @@
 from django.contrib import admin
-from .models import Equipment, MuscleGroup, Exercise, ExerciseMuscle, ExerciseMedia
+from .models import (
+    Equipment,
+    MuscleGroup,
+    Exercise,
+    ExerciseMuscle,
+    ExerciseMedia,
+    UserFavoriteEquipment,
+    UserFavoriteExercise,
+)
 
 class ExerciseMuscleInline(admin.TabularInline):
     model = ExerciseMuscle
@@ -38,4 +46,18 @@ class ExerciseAdmin(admin.ModelAdmin):
 class ExerciseMediaAdmin(admin.ModelAdmin):
     list_display = ('exercise', 'media_type', 'title', 'order')
     list_filter = ('media_type',)
+
+
+@admin.register(UserFavoriteEquipment)
+class UserFavoriteEquipmentAdmin(admin.ModelAdmin):
+    list_display = ('user', 'equipment', 'created_at')
+    list_filter = ('created_at',)
+    search_fields = ('user__email', 'equipment__name')
+
+
+@admin.register(UserFavoriteExercise)
+class UserFavoriteExerciseAdmin(admin.ModelAdmin):
+    list_display = ('user', 'exercise', 'created_at')
+    list_filter = ('created_at',)
+    search_fields = ('user__email', 'exercise__name')
 

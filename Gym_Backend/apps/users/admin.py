@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
-from .models import User
+from .models import User, BodyWeightLog, UserSettings
 
 class CustomUserCreationForm(UserCreationForm):
     class Meta(UserCreationForm.Meta):
@@ -39,3 +39,17 @@ class UserAdmin(BaseUserAdmin):
     
     search_fields = ('email', 'username')
     ordering = ('email',)
+
+
+@admin.register(BodyWeightLog)
+class BodyWeightLogAdmin(admin.ModelAdmin):
+    list_display = ('user', 'weight', 'date', 'created_at')
+    list_filter = ('date',)
+    search_fields = ('user__email',)
+
+
+@admin.register(UserSettings)
+class UserSettingsAdmin(admin.ModelAdmin):
+    list_display = ('user', 'theme_mode', 'accent_color', 'language', 'updated_at')
+    list_filter = ('theme_mode', 'accent_color', 'language')
+    search_fields = ('user__email',)

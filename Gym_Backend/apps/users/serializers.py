@@ -3,7 +3,7 @@ from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from apps.catalog.models import validate_image
 from apps.catalog.serializers import FlexibleImageField
-from .models import User, BodyWeightLog
+from .models import User, BodyWeightLog, UserSettings
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=6)
@@ -105,4 +105,13 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             'is_staff': self.user.is_staff,
         }
         return data
+
+
+class UserSettingsSerializer(serializers.ModelSerializer):
+    """Serializes persistent UI appearance and language preferences per user."""
+
+    class Meta:
+        model = UserSettings
+        fields = ('theme_mode', 'accent_color', 'language', 'updated_at')
+        read_only_fields = ('updated_at',)
 
