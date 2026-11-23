@@ -137,6 +137,7 @@ class ExerciseDetailSerializer(serializers.ModelSerializer):
     video_url = serializers.URLField(write_only=True, required=False, allow_blank=True)
     image = FlexibleImageField(required=False, allow_null=True, validators=[validate_image])
     image_url = serializers.SerializerMethodField()
+    own_image = serializers.SerializerMethodField()
     muscles = ExerciseMuscleSerializer(source='exercise_muscles', many=True, read_only=True)
     media = ExerciseMediaSerializer(many=True, read_only=True)
     is_favorite = serializers.BooleanField(read_only=True, default=False)
@@ -144,13 +145,16 @@ class ExerciseDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Exercise
         fields = (
-            'id', 'name', 'slug', 'image', 'image_url', 'is_favorite', 'equipment', 'equipment_id', 'muscle_id', 'video_url', 'muscles', 
+            'id', 'name', 'slug', 'image', 'image_url', 'own_image', 'is_favorite', 'equipment', 'equipment_id', 'muscle_id', 'video_url', 'muscles', 
             'mechanics', 'difficulty', 'instructions', 'tips', 'media', 
             'created_at', 'updated_at'
         )
 
     def get_image_url(self, obj):
         return _resolve_exercise_image_url(obj, self.context.get('request'))
+
+    def get_own_image(self, obj):
+        return _build_abs_url(self.context.get('request'), obj.image)
 
     def to_representation(self, instance):
         data = super().to_representation(instance)

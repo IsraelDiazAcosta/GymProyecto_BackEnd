@@ -1,0 +1,2541 @@
+{
+  "info": {
+    "name": "GymProyecto API Completa (v1)",
+    "description": "Colección completa con todos los endpoints de Auth, Catálogo, Rutinas y Tracking. Incluye scripts automáticos para guardar el token JWT y los IDs creados.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refresh_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "muscle_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "equipment_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "exercise_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "media_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "routine_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "routine_day_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "routine_exercise_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "routine_set_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "session_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "log_exercise_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "set_log_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "01 - Auth y Usuarios",
+      "item": [
+        {
+          "name": "1. Registrar Usuario",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/register/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "register",
+                ""
+              ]
+            },
+            "description": "Crea una cuenta nueva y guarda automáticamente access_token y refresh_token.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"nuevo_atleta@gym.com\",\n  \"username\": \"NuevoAtleta\",\n  \"password\": \"Password123!\",\n  \"password_confirm\": \"Password123!\",\n  \"experience_level\": \"beginner\",\n  \"training_goal\": \"hypertrophy\",\n  \"current_weight\": \"75.50\",\n  \"height\": \"1.78\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const data = pm.response.json();",
+                  "  if (data.tokens && data.tokens.access) pm.collectionVariables.set(\"access_token\", data.tokens.access);",
+                  "  if (data.tokens && data.tokens.refresh) pm.collectionVariables.set(\"refresh_token\", data.tokens.refresh);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. Login (Obtener Token JWT)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/login/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login",
+                ""
+              ]
+            },
+            "description": "Inicia sesión y guarda automáticamente el JWT Bearer token en la colección.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"nuevo_atleta@gym.com\",\n  \"password\": \"Password123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json();",
+                  "  if (data.access) pm.collectionVariables.set(\"access_token\", data.access);",
+                  "  if (data.refresh) pm.collectionVariables.set(\"refresh_token\", data.refresh);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3. Refrescar Token JWT",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/token/refresh/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "token",
+                "refresh",
+                ""
+              ]
+            },
+            "description": "Genera un nuevo access_token usando el refresh_token.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh\": \"{{refresh_token}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json();",
+                  "  if (data.access) pm.collectionVariables.set(\"access_token\", data.access);",
+                  "  if (data.refresh) pm.collectionVariables.set(\"refresh_token\", data.refresh);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4. Ver Mi Perfil",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/profile/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "profile",
+                ""
+              ]
+            },
+            "description": "Obtiene el perfil del usuario autenticado."
+          },
+          "response": []
+        },
+        {
+          "name": "5. Editar Mi Perfil",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/profile/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "profile",
+                ""
+              ]
+            },
+            "description": "Actualiza datos del perfil del usuario autenticado.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"AtletaPro\",\n  \"experience_level\": \"intermediate\",\n  \"training_goal\": \"strength\",\n  \"current_weight\": \"76.20\",\n  \"height\": \"1.78\",\n  \"bio\": \"Entrenando fuerza e hipertrofia 4 días a la semana.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "6. Listar Historial de Peso Corporal",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/weight-logs/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "weight-logs",
+                ""
+              ]
+            },
+            "description": "Historial de registros de peso corporal."
+          },
+          "response": []
+        },
+        {
+          "name": "7. Registrar Peso Corporal",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/weight-logs/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "weight-logs",
+                ""
+              ]
+            },
+            "description": "Agrega un nuevo registro de peso corporal y actualiza current_weight.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weight\": \"76.40\",\n  \"date\": \"2026-11-23\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "8. Listar Usuarios (Solo Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/users/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "users",
+                ""
+              ]
+            },
+            "description": "Requiere iniciar sesión con un usuario administrador (is_staff=True)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "02 - Catálogo: Grupos Musculares",
+      "item": [
+        {
+          "name": "1. Listar Grupos Musculares",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/catalog/muscles/?page=1&page_size=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "catalog",
+                "muscles",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "page_size",
+                  "value": "20"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "body_part",
+                  "value": "Pierna",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json();",
+                  "  const list = data.results || data;",
+                  "  if (Array.isArray(list) && list.length > 0) pm.collectionVariables.set(\"muscle_id\", String(list[0].id));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. Detalle de Grupo Muscular",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/catalog/muscles/{{muscle_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "catalog",
+                "muscles",
+                "{{muscle_id}}",
+                ""
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "3. Crear Grupo Muscular (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/catalog/muscles/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "catalog",
+                "muscles",
+                ""
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Antebrazo\",\n  \"body_part\": \"Brazo\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) pm.collectionVariables.set(\"muscle_id\", String(pm.response.json().id));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4. Editar Grupo Muscular (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/catalog/muscles/{{muscle_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "catalog",
+                "muscles",
+                "{{muscle_id}}",
+                ""
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Antebrazo y Agarre\",\n  \"body_part\": \"Brazo\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "5. Eliminar Grupo Muscular (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/catalog/muscles/{{muscle_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "catalog",
+                "muscles",
+                "{{muscle_id}}",
+                ""
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "03 - Catálogo: Máquinas y Equipos",
+      "item": [
+        {
+          "name": "1. Listar Máquinas (con paginación)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/catalog/equipment/?page=1&page_size=10",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "catalog",
+                "equipment",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "page_size",
+                  "value": "10"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "type",
+                  "value": "plate_loaded",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json();",
+                  "  const list = data.results || data;",
+                  "  if (Array.isArray(list) && list.length > 0) pm.collectionVariables.set(\"equipment_id\", String(list[0].id));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. Detalle de Máquina",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/catalog/equipment/{{equipment_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "catalog",
+                "equipment",
+                "{{equipment_id}}",
+                ""
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "3. Crear Máquina (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/catalog/equipment/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "catalog",
+                "equipment",
+                ""
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Prensa Hack 45\",\n  \"equipment_type\": \"plate_loaded\",\n  \"brand\": \"Hammer Strength\",\n  \"description\": \"Máquina guiada para enfoque de cuádriceps.\",\n  \"setup_guide\": \"Coloca los pies al ancho de hombros en la parte media-baja.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) pm.collectionVariables.set(\"equipment_id\", String(pm.response.json().id));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4. Editar Máquina (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/catalog/equipment/{{equipment_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "catalog",
+                "equipment",
+                "{{equipment_id}}",
+                ""
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"brand\": \"Life Fitness\",\n  \"description\": \"Descripción actualizada de la máquina.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "5. Marcar / Quitar Máquina Favorita",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/catalog/equipment/{{equipment_id}}/favorite/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "catalog",
+                "equipment",
+                "{{equipment_id}}",
+                "favorite",
+                ""
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "6. Listar Mis Máquinas Favoritas",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/catalog/equipment/favorites/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "catalog",
+                "equipment",
+                "favorites",
+                ""
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "7. Eliminar Máquina (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/catalog/equipment/{{equipment_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "catalog",
+                "equipment",
+                "{{equipment_id}}",
+                ""
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "04 - Catálogo: Ejercicios y Multimedia",
+      "item": [
+        {
+          "name": "1. Listar Ejercicios (con paginación)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/catalog/exercises/?page=1&page_size=10",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "catalog",
+                "exercises",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "page_size",
+                  "value": "10"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "equipment",
+                  "value": "{{equipment_id}}",
+                  "disabled": true
+                },
+                {
+                  "key": "muscle",
+                  "value": "{{muscle_id}}",
+                  "disabled": true
+                },
+                {
+                  "key": "difficulty",
+                  "value": "beginner",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json();",
+                  "  const list = data.results || data;",
+                  "  if (Array.isArray(list) && list.length > 0) pm.collectionVariables.set(\"exercise_id\", String(list[0].id));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. Detalle / Ficha de Ejercicio",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/catalog/exercises/{{exercise_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "catalog",
+                "exercises",
+                "{{exercise_id}}",
+                ""
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "3. Crear Ejercicio (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/catalog/exercises/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "catalog",
+                "exercises",
+                ""
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Sentadilla Hack en Máquina\",\n  \"equipment_id\": \"{{equipment_id}}\",\n  \"muscle_id\": \"{{muscle_id}}\",\n  \"mechanics\": \"compound\",\n  \"difficulty\": \"intermediate\",\n  \"instructions\": \"1. Apoya la espalda firme.\\n2. Baja controladamente a 90 grados.\\n3. Empuja sin bloquear rodillas.\",\n  \"tips\": \"Mantén los talones pegados a la plataforma.\",\n  \"video_url\": \"https://www.youtube.com/watch?v=dQw4w9WgXcQ\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) pm.collectionVariables.set(\"exercise_id\", String(pm.response.json().id));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4. Editar Ejercicio (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/catalog/exercises/{{exercise_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "catalog",
+                "exercises",
+                "{{exercise_id}}",
+                ""
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Sentadilla Hack en Máquina (Editado)\",\n  \"equipment_id\": \"{{equipment_id}}\",\n  \"muscle_id\": \"{{muscle_id}}\",\n  \"instructions\": \"Instrucciones técnicas actualizadas.\",\n  \"video_url\": \"https://www.youtube.com/watch?v=dQw4w9WgXcQ\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "5. Marcar / Quitar Ejercicio Favorito",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/catalog/exercises/{{exercise_id}}/favorite/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "catalog",
+                "exercises",
+                "{{exercise_id}}",
+                "favorite",
+                ""
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "6. Listar Mis Ejercicios Favoritos",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/catalog/exercises/favorites/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "catalog",
+                "exercises",
+                "favorites",
+                ""
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "7. Eliminar Ejercicio (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/catalog/exercises/{{exercise_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "catalog",
+                "exercises",
+                "{{exercise_id}}",
+                ""
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "8. Listar Multimedia de Ejercicios",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/catalog/media/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "catalog",
+                "media",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "exercise",
+                  "value": "{{exercise_id}}",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "9. Crear Multimedia de Ejercicio (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/catalog/media/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "catalog",
+                "media",
+                ""
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"exercise\": \"{{exercise_id}}\",\n  \"media_type\": \"video\",\n  \"title\": \"Vista lateral\",\n  \"external_url\": \"https://www.youtube.com/watch?v=dQw4w9WgXcQ\",\n  \"order\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) pm.collectionVariables.set(\"media_id\", String(pm.response.json().id));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10. Editar Multimedia (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/catalog/media/{{media_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "catalog",
+                "media",
+                "{{media_id}}",
+                ""
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Vista frontal\",\n  \"order\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "11. Eliminar Multimedia (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/catalog/media/{{media_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "catalog",
+                "media",
+                "{{media_id}}",
+                ""
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "05 - Rutinas",
+      "item": [
+        {
+          "name": "1. Listar Mis Rutinas",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/routines/routines/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "routines",
+                "routines",
+                ""
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json();",
+                  "  const list = data.results || data;",
+                  "  if (Array.isArray(list) && list.length > 0) {",
+                  "    pm.collectionVariables.set(\"routine_id\", String(list[0].id));",
+                  "    if (list[0].days && list[0].days[0]) {",
+                  "      pm.collectionVariables.set(\"routine_day_id\", String(list[0].days[0].id));",
+                  "      if (list[0].days[0].exercises && list[0].days[0].exercises[0]) {",
+                  "        pm.collectionVariables.set(\"routine_exercise_id\", String(list[0].days[0].exercises[0].id));",
+                  "      }",
+                  "    }",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. Crear Rutina (con ejercicios)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/routines/routines/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "routines",
+                "routines",
+                ""
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Rutina Pierna Hipertrofia\",\n  \"description\": \"Enfoque en cuádriceps y glúteos\",\n  \"exercise_ids\": [\n    \"{{exercise_id}}\"\n  ],\n  \"sets_count\": 4,\n  \"min_reps\": 8,\n  \"max_reps\": 12\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) pm.collectionVariables.set(\"routine_id\", String(pm.response.json().id));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3. Detalle de Rutina",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/routines/routines/{{routine_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "routines",
+                "routines",
+                "{{routine_id}}",
+                ""
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "4. Editar Rutina",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/routines/routines/{{routine_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "routines",
+                "routines",
+                "{{routine_id}}",
+                ""
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Rutina Pierna Fuerza e Hipertrofia\",\n  \"description\": \"Actualizada desde Postman\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "5. Agregar Ejercicio a Rutina",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/routines/routines/{{routine_id}}/add-exercise/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "routines",
+                "routines",
+                "{{routine_id}}",
+                "add-exercise",
+                ""
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"exercise_id\": \"{{exercise_id}}\",\n  \"sets_count\": 4,\n  \"min_reps\": 8,\n  \"max_reps\": 12,\n  \"rest_seconds\": 90\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "6. Clonar Rutina",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/routines/routines/{{routine_id}}/clone/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "routines",
+                "routines",
+                "{{routine_id}}",
+                "clone",
+                ""
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "7. Eliminar Rutina",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/routines/routines/{{routine_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "routines",
+                "routines",
+                "{{routine_id}}",
+                ""
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "8. Listar Días de Rutina",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/routines/days/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "routines",
+                "days",
+                ""
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "9. Editar Día de Rutina",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/routines/days/{{routine_day_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "routines",
+                "days",
+                "{{routine_day_id}}",
+                ""
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Día 1: Pierna Pesada\",\n  \"order\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "10. Listar Ejercicios en Rutinas",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/routines/exercises/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "routines",
+                "exercises",
+                ""
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const list = pm.response.json().results || pm.response.json();",
+                  "  if (Array.isArray(list) && list.length > 0) pm.collectionVariables.set(\"routine_exercise_id\", String(list[0].id));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "11. Editar Series y Reps de Ejercicio en Rutina",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/routines/exercises/{{routine_exercise_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "routines",
+                "exercises",
+                "{{routine_exercise_id}}",
+                ""
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sets_count\": 5,\n  \"min_reps\": 6,\n  \"max_reps\": 10\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "12. Quitar Ejercicio de Rutina",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/routines/exercises/{{routine_exercise_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "routines",
+                "exercises",
+                "{{routine_exercise_id}}",
+                ""
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "13. Listar Sets Objetivo de Rutina",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/routines/sets/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "routines",
+                "sets",
+                ""
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const list = pm.response.json().results || pm.response.json();",
+                  "  if (Array.isArray(list) && list.length > 0) pm.collectionVariables.set(\"routine_set_id\", String(list[0].id));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "14. Editar Set Objetivo",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/routines/sets/{{routine_set_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "routines",
+                "sets",
+                "{{routine_set_id}}",
+                ""
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"min_reps\": 8,\n  \"max_reps\": 12,\n  \"target_rpe\": \"8.5\",\n  \"target_weight\": \"80.00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "15. Eliminar Set Objetivo",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/routines/sets/{{routine_set_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "routines",
+                "sets",
+                "{{routine_set_id}}",
+                ""
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "06 - Tracking: Sesiones, Marcas y Progreso",
+      "item": [
+        {
+          "name": "1. Iniciar Sesión con Cronómetro",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/tracking/sessions/start/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tracking",
+                "sessions",
+                "start",
+                ""
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"routine_id\": \"{{routine_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "  const d = pm.response.json();",
+                  "  if (d && d.id) pm.collectionVariables.set(\"session_id\", String(d.id));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. Ver Sesión Activa",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/tracking/sessions/active/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tracking",
+                "sessions",
+                "active",
+                ""
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "3. Vincular Ejercicio a Sesión",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/tracking/exercises/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tracking",
+                "exercises",
+                ""
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session\": \"{{session_id}}\",\n  \"exercise\": \"{{exercise_id}}\",\n  \"order\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) pm.collectionVariables.set(\"log_exercise_id\", String(pm.response.json().id));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4. Registrar Marca / Serie (Peso, Reps, RPE)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/tracking/sets/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tracking",
+                "sets",
+                ""
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"log_exercise\": \"{{log_exercise_id}}\",\n  \"set_number\": 1,\n  \"weight\": 100,\n  \"reps\": 10,\n  \"rpe\": 8.5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) pm.collectionVariables.set(\"set_log_id\", String(pm.response.json().id));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5. Editar Marca / Serie",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/tracking/sets/{{set_log_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tracking",
+                "sets",
+                "{{set_log_id}}",
+                ""
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weight\": 105,\n  \"reps\": 8,\n  \"rpe\": 9.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "6. Eliminar Marca / Serie",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/tracking/sets/{{set_log_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tracking",
+                "sets",
+                "{{set_log_id}}",
+                ""
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "7. Finalizar Sesión Activa",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/tracking/sessions/finish/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tracking",
+                "sessions",
+                "finish",
+                ""
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"perceived_effort_rpe\": 8.5,\n  \"notes\": \"Buena sesión de prueba desde Postman\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "8. Finalizar Sesión por ID",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/tracking/sessions/{{session_id}}/finish/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tracking",
+                "sessions",
+                "{{session_id}}",
+                "finish",
+                ""
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"perceived_effort_rpe\": 8.0,\n  \"notes\": \"Finalizada por ID\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "9. Cancelar Sesión Activa",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/tracking/sessions/cancel/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tracking",
+                "sessions",
+                "cancel",
+                ""
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "10. Listar Sesiones (CRUD)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/tracking/sessions/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tracking",
+                "sessions",
+                ""
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "11. Crear Sesión Manual",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/tracking/sessions/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tracking",
+                "sessions",
+                ""
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Entrenamiento Manual Postman\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) pm.collectionVariables.set(\"session_id\", String(pm.response.json().id));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "12. Detalle Completo de Sesión",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/tracking/sessions/{{session_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tracking",
+                "sessions",
+                "{{session_id}}",
+                ""
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "13. Detalle de Sesión (/detail/)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/tracking/sessions/{{session_id}}/detail/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tracking",
+                "sessions",
+                "{{session_id}}",
+                "detail",
+                ""
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "14. Historial Paginado de Sesiones Completadas",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/tracking/sessions/history/?page=1&page_size=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tracking",
+                "sessions",
+                "history",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "page_size",
+                  "value": "20"
+                },
+                {
+                  "key": "desde",
+                  "value": "2026-01-01",
+                  "disabled": true
+                },
+                {
+                  "key": "hasta",
+                  "value": "2026-12-31",
+                  "disabled": true
+                },
+                {
+                  "key": "routine_id",
+                  "value": "{{routine_id}}",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "15. Resumen de Sesiones por Rutina",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/tracking/sessions/routine-summary/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tracking",
+                "sessions",
+                "routine-summary",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "desde",
+                  "value": "2026-01-01",
+                  "disabled": true
+                },
+                {
+                  "key": "hasta",
+                  "value": "2026-12-31",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "16. Eliminar Sesión",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/tracking/sessions/{{session_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tracking",
+                "sessions",
+                "{{session_id}}",
+                ""
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "17. Listar Ejercicios Realizados",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/tracking/exercises/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tracking",
+                "exercises",
+                ""
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "18. Listar Series Registradas",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/tracking/sets/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tracking",
+                "sets",
+                ""
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "19. Progresión de un Ejercicio (1RM y PRs)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/tracking/progression/{{exercise_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tracking",
+                "progression",
+                "{{exercise_id}}",
+                ""
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "20. Progreso Peso Corporal vs 1RM",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/tracking/progress/weight-1rm/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tracking",
+                "progress",
+                "weight-1rm",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "exercise_id",
+                  "value": "{{exercise_id}}",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

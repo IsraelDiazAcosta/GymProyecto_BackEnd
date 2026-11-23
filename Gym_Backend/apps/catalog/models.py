@@ -58,8 +58,11 @@ def delete_old_file_on_update(instance, model_class, field_name='image'):
     old_file = getattr(old_instance, field_name)
     new_file = getattr(instance, field_name)
     if old_file and old_file != new_file:
-        if os.path.isfile(old_file.path):
-            os.remove(old_file.path)
+        try:
+            if old_file.path and os.path.isfile(old_file.path):
+                os.remove(old_file.path)
+        except (OSError, ValueError):
+            pass
         return True
     return bool(new_file and not old_file)
 
@@ -262,7 +265,11 @@ class UserFavoriteExercise(models.Model):
 @receiver(post_delete, sender=Equipment)
 @receiver(post_delete, sender=Exercise)
 def auto_delete_image_on_delete(sender, instance, **kwargs):
-    if instance.image and os.path.isfile(instance.image.path):
-        os.remove(instance.image.path)
+    if instance.image:
+        try:
+            if instance.image.path and os.path.isfile(instance.image.path):
+                os.remove(instance.image.path)
+        except (OSError, ValueError):
+            pass
 
 

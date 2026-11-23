@@ -41,12 +41,20 @@ class RoutineViewSet(viewsets.ModelViewSet):
         return []
 
     @staticmethod
+    def _safe_pos_int(raw, default):
+        try:
+            val = int(raw)
+            return val if val >= 1 else default
+        except (TypeError, ValueError):
+            return default
+
+    @staticmethod
     def _add_exercises_to_day(day, ids_to_add, data):
         """Crea RoutineExercise y RoutineSet para los ejercicios indicados en un día de rutina."""
-        sets_count = int(data.get('sets_count', 4) or 4)
-        min_reps = int(data.get('min_reps', 8) or 8)
-        max_reps = int(data.get('max_reps', 12) or 12)
-        rest_seconds = int(data.get('rest_seconds', 90) or 90)
+        sets_count = RoutineViewSet._safe_pos_int(data.get('sets_count'), 4)
+        min_reps = RoutineViewSet._safe_pos_int(data.get('min_reps'), 8)
+        max_reps = max(min_reps, RoutineViewSet._safe_pos_int(data.get('max_reps'), 12))
+        rest_seconds = RoutineViewSet._safe_pos_int(data.get('rest_seconds'), 90)
         notes = data.get('notes', '') or ''
         next_order = day.exercises.count() + 1
 
@@ -79,13 +87,18 @@ class RoutineViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], url_path='add-exercise')
     def add_exercise(self, request, pk=None):
         """Agrega uno o más ejercicios del catálogo a la rutina con sus series y repeticiones objetivo."""
+        ids_to_add = self._extract_exercise_ids(request.data)
+        if not ids_to_add:
+            return Response(
+                {'detail': 'Debes seleccionar al menos un ejercicio.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         with transaction.atomic():
             routine = self.get_object()
             day = routine.days.first()
             if not day:
                 day = RoutineDay.objects.create(routine=routine, name='Día 1', order=1)
 
-            ids_to_add = self._extract_exercise_ids(request.data) or [None]
             self._add_exercises_to_day(day, ids_to_add, request.data)
 
         routine = self.get_queryset().get(pk=routine.pk)
