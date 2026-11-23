@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "GymProyecto API Completa (v1)",
-    "description": "Colección completa con todos los endpoints de Auth, Catálogo, Rutinas y Tracking. Incluye scripts automáticos para guardar el token JWT y los IDs creados.",
+    "description": "Colección completa con todos los endpoints de Auth, Settings, Catálogo, Rutinas y Tracking. Incluye scripts automáticos para guardar el token JWT y los IDs creados.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -323,7 +323,70 @@
           "response": []
         },
         {
-          "name": "6. Listar Historial de Peso Corporal",
+          "name": "6. Ver Mis Preferencias (Settings)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/settings/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "settings",
+                ""
+              ]
+            },
+            "description": "Obtiene las preferencias persistidas del usuario autenticado (theme_mode, accent_color, language). Si aún no existen, las crea automáticamente con valores por defecto."
+          },
+          "response": []
+        },
+        {
+          "name": "7. Editar Mis Preferencias (Settings)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/settings/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "settings",
+                ""
+              ]
+            },
+            "description": "Actualiza las preferencias de apariencia o idioma en el servidor. Valores válidos: theme_mode (dark | light | system), accent_color (emerald | ocean | amber | violet | crimson), language (es | en | system).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"theme_mode\": \"light\",\n  \"accent_color\": \"ocean\",\n  \"language\": \"en\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "8. Listar Historial de Peso Corporal",
           "request": {
             "method": "GET",
             "header": [
@@ -348,7 +411,7 @@
           "response": []
         },
         {
-          "name": "7. Registrar Peso Corporal",
+          "name": "9. Registrar Peso Corporal",
           "request": {
             "method": "POST",
             "header": [
@@ -386,7 +449,7 @@
           "response": []
         },
         {
-          "name": "8. Listar Usuarios (Solo Admin)",
+          "name": "10. Listar Usuarios (Solo Admin)",
           "request": {
             "method": "GET",
             "header": [
@@ -1383,7 +1446,16 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "if (pm.response.code === 201) pm.collectionVariables.set(\"routine_id\", String(pm.response.json().id));"
+                  "if (pm.response.code === 201) {",
+                  "  const d = pm.response.json();",
+                  "  if (d && d.id) pm.collectionVariables.set(\"routine_id\", String(d.id));",
+                  "  if (d && d.days && d.days[0]) {",
+                  "    pm.collectionVariables.set(\"routine_day_id\", String(d.days[0].id));",
+                  "    if (d.days[0].exercises && d.days[0].exercises[0]) {",
+                  "      pm.collectionVariables.set(\"routine_exercise_id\", String(d.days[0].exercises[0].id));",
+                  "    }",
+                  "  }",
+                  "}"
                 ]
               }
             }
@@ -2342,12 +2414,12 @@
                   "value": "20"
                 },
                 {
-                  "key": "desde",
+                  "key": "from",
                   "value": "2026-01-01",
                   "disabled": true
                 },
                 {
-                  "key": "hasta",
+                  "key": "to",
                   "value": "2026-12-31",
                   "disabled": true
                 },
@@ -2385,12 +2457,12 @@
               ],
               "query": [
                 {
-                  "key": "desde",
+                  "key": "from",
                   "value": "2026-01-01",
                   "disabled": true
                 },
                 {
-                  "key": "hasta",
+                  "key": "to",
                   "value": "2026-12-31",
                   "disabled": true
                 }

@@ -1,6 +1,6 @@
 # 08 — Guía Completa de Pruebas en Postman (Paso a Paso)
 
-Esta guía documenta **las 66 peticiones** de la API de **GymProyecto** incluidas en la colección:
+Esta guía documenta **las 68 peticiones** de la API de **GymProyecto** incluidas en la colección:
 `Gym_Backend/postman/GymProyecto_API_Completa.postman_collection.json`
 
 Explica **qué hace cada consulta**, **qué método HTTP usa**, **qué permisos requiere**, **en qué orden ejecutarlas** y **qué JSON enviar** para probar toda la API de principio a fin sin errores.
@@ -103,20 +103,44 @@ Explica **qué hace cada consulta**, **qué método HTTP usa**, **qué permisos 
   ```
 - **Esperado:** `200 OK`.
 
-### Paso 1.6 — Listar Historial de Peso Corporal
+### Paso 1.6 — Ver Mis Preferencias (Settings)
+- **Tipo:** `GET` *(Consultar)* | **Permiso:** Autenticado
+- **URL:** `{{base_url}}/auth/settings/`
+- **Qué hace:** Obtiene las preferencias persistidas del usuario autenticado (`theme_mode`, `accent_color`, `language`). Si aún no existen en el servidor, las crea automáticamente con sus valores por defecto (`dark`, `emerald`, `es`).
+- **Esperado:** `200 OK`.
+
+### Paso 1.7 — Editar Mis Preferencias (Settings)
+- **Tipo:** `PATCH` *(Actualizar)* | **Permiso:** Autenticado
+- **URL:** `{{base_url}}/auth/settings/`
+- **Qué hace:** Guarda en el servidor el modo de tema, color de acento o idioma elegidos por el usuario.
+- **Valores válidos:**
+  - `theme_mode`: `dark`, `light`, `system`
+  - `accent_color`: `emerald`, `ocean`, `amber`, `violet`, `crimson`
+  - `language`: `es`, `en`, `system`
+- **Body (JSON):**
+  ```json
+  {
+    "theme_mode": "light",
+    "accent_color": "ocean",
+    "language": "en"
+  }
+  ```
+- **Esperado:** `200 OK`.
+
+### Paso 1.8 — Listar Historial de Peso Corporal
 - **Tipo:** `GET` *(Consultar)* | **Permiso:** Autenticado
 - **URL:** `{{base_url}}/auth/weight-logs/`
 - **Qué hace:** Trae el historial de registros de peso corporal del usuario ordenados del más reciente al más antiguo.
 - **Esperado:** `200 OK`.
 
-### Paso 1.7 — Registrar Peso Corporal
+### Paso 1.9 — Registrar Peso Corporal
 - **Tipo:** `POST` *(Crear)* | **Permiso:** Autenticado
 - **URL:** `{{base_url}}/auth/weight-logs/`
 - **Qué hace:** Agrega un nuevo peso al historial y actualiza automáticamente `current_weight` en el perfil.
 - **Body (JSON):** `{ "weight": "76.40", "date": "2026-11-23" }`
 - **Esperado:** `201 Created`.
 
-### Paso 1.8 — Listar Todos los Usuarios (Panel Admin)
+### Paso 1.10 — Listar Todos los Usuarios (Panel Admin)
 - **Tipo:** `GET` *(Consultar)* | **Permiso:** Solo Admin
 - **URL:** `{{base_url}}/auth/users/`
 - **Qué hace:** Lista todos los usuarios registrados junto con su conteo de rutinas y entrenamientos.
@@ -177,7 +201,7 @@ Explica **qué hace cada consulta**, **qué método HTTP usa**, **qué permisos 
 | **4.6** | `GET` | `/catalog/exercises/favorites/` | Autenticado | Lista solo los ejercicios favoritos del usuario autenticado. |
 | **4.7** | `DELETE` | `/catalog/exercises/{{exercise_id}}/` | Solo Admin | Elimina el ejercicio y limpia sus referencias en rutinas y sesiones *(dejar al final o usar un ejercicio de prueba)*. |
 | **4.8** | `GET` | `/catalog/media/?exercise={{exercise_id}}` | Público | Lista el material multimedia (videos/fotos/GIFs) de ejercicios. |
-| **4.9** | `POST` | `/catalog/media/` | Solo Admin | Agrega un nuevo video/foto/GIF a un ejercicio. Guarda `{{media_id}}`. |
+| **4.9** | `POST` | `/catalog/media/` | Solo Admin | Agrega un nuevo video/foto/GIF a un ejercicio (`exercise` UUID requerido). Guarda `{{media_id}}`. |
 | **4.10** | `PATCH` | `/catalog/media/{{media_id}}/` | Solo Admin | Edita título u orden de un archivo multimedia. |
 | **4.11** | `DELETE` | `/catalog/media/{{media_id}}/` | Solo Admin | Elimina un elemento multimedia. |
 
@@ -203,7 +227,7 @@ Explica **qué hace cada consulta**, **qué método HTTP usa**, **qué permisos 
 | Orden | Tipo | URL | Permiso | Qué hace |
 | :--- | :--- | :--- | :--- | :--- |
 | **5.1** | `GET` | `/routines/routines/` | Autenticado | Lista tus rutinas y plantillas públicas. Guarda `{{routine_id}}`, `{{routine_day_id}}` y `{{routine_exercise_id}}`. |
-| **5.2** | `POST` | `/routines/routines/` | Autenticado | Crea una rutina nueva junto con `Día 1`, los ejercicios en `exercise_ids` y sus series objetivo. Guarda `{{routine_id}}`. |
+| **5.2** | `POST` | `/routines/routines/` | Autenticado | Crea una rutina nueva junto con `Day 1`, los ejercicios en `exercise_ids` y sus series objetivo. Guarda `{{routine_id}}`, `{{routine_day_id}}` y `{{routine_exercise_id}}`. |
 | **5.3** | `GET` | `/routines/routines/{{routine_id}}/` | Autenticado | Obtiene el detalle completo de una rutina con sus días, ejercicios y sets. |
 | **5.4** | `PATCH` | `/routines/routines/{{routine_id}}/` | Autenticado | Edita título o descripción de la rutina. |
 | **5.5** | `POST` | `/routines/routines/{{routine_id}}/add-exercise/` | Autenticado | Agrega uno o más ejercicios con sus series (`sets_count`), `min_reps`, `max_reps` y `rest_seconds`. |
@@ -243,8 +267,8 @@ Explica **qué hace cada consulta**, **qué método HTTP usa**, **qué permisos 
 | **6.11** | `POST` | `/tracking/sessions/` | Autenticado | Crea una sesión manual directamente. Guarda `{{session_id}}`. |
 | **6.12** | `GET` | `/tracking/sessions/{{session_id}}/` | Autenticado | Detalle completo de una sesión (incluye ejercicios planeados vs registrados). |
 | **6.13** | `GET` | `/tracking/sessions/{{session_id}}/detail/` | Autenticado | Alias del detalle completo de sesión. |
-| **6.14** | `GET` | `/tracking/sessions/history/?page=1&page_size=20` | Autenticado | Historial paginado de sesiones completadas con resumen (`total_sessions`, duración total y promedio) y filtros `?desde=`, `?hasta=`, `?routine_id=`. |
-| **6.15** | `GET` | `/tracking/sessions/routine-summary/` | Autenticado | Resumen agrupado por rutina (cuántas veces hiciste cada rutina y duración promedio). |
+| **6.14** | `GET` | `/tracking/sessions/history/?page=1&page_size=20` | Autenticado | Historial paginado de sesiones completadas con resumen (`total_sessions`, duración total y promedio) y filtros `?from=`, `?to=`, `?routine_id=` *(compatible también con `?desde=` y `?hasta=`)*. |
+| **6.15** | `GET` | `/tracking/sessions/routine-summary/` | Autenticado | Resumen agrupado por rutina (cuántas veces hiciste cada rutina y duración promedio); soporta `?from=` y `?to=` *(y legacy `?desde=` / `?hasta=`)*. |
 | **6.16** | `DELETE` | `/tracking/sessions/{{session_id}}/` | Autenticado | Elimina una sesión del historial. |
 | **6.17** | `GET` | `/tracking/exercises/` | Autenticado | Lista todos los ejercicios registrados en tus sesiones. |
 | **6.18** | `GET` | `/tracking/sets/` | Autenticado | Lista todas tus series/marcas registradas. |
@@ -254,14 +278,15 @@ Explica **qué hace cada consulta**, **qué método HTTP usa**, **qué permisos 
 ---
 
 ## Resumen del flujo mínimo recomendado para demostrar en revisión (2 minutos)
-Si en tu revisión quieres demostrar que toda la API funciona de punta a punta en pocos clics, corre solo estos **10 pasos en orden**:
+Si en tu revisión quieres demostrar que toda la API funciona de punta a punta en pocos clics, corre solo estos **11 pasos en orden**:
 1. `1.2 Login` *(con Admin → guarda token)*
 2. `1.4 Ver Mi Perfil`
-3. `2.1 Listar Grupos Musculares` *(guarda `muscle_id`)*
-4. `3.3 Crear Máquina` *(guarda `equipment_id`)*
-5. `4.3 Crear Ejercicio` *(usa `muscle_id` y `equipment_id`, guarda `exercise_id`)*
-6. `4.1 Listar Ejercicios (?page=1&page_size=10)` *(demuestra paginación)*
-7. `5.2 Crear Rutina` *(usa `exercise_id`, guarda `routine_id`)*
-8. `6.1 Iniciar Sesión` → `6.3 Vincular Ejercicio` → `6.4 Registrar Marca`
-9. `6.7 Finalizar Sesión Activa`
-10. `6.14 Historial Paginado` y `6.19 Progresión 1RM`
+3. `1.7 Editar Mis Preferencias (Settings)`
+4. `2.1 Listar Grupos Musculares` *(guarda `muscle_id`)*
+5. `3.3 Crear Máquina` *(guarda `equipment_id`)*
+6. `4.3 Crear Ejercicio` *(usa `muscle_id` y `equipment_id`, guarda `exercise_id`)*
+7. `4.1 Listar Ejercicios (?page=1&page_size=10)` *(demuestra paginación)*
+8. `5.2 Crear Rutina` *(usa `exercise_id`, guarda `routine_id`)*
+9. `6.1 Iniciar Sesión` → `6.3 Vincular Ejercicio` → `6.4 Registrar Marca`
+10. `6.7 Finalizar Sesión Activa`
+11. `6.14 Historial Paginado` y `6.19 Progresión 1RM`

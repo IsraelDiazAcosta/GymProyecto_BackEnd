@@ -97,7 +97,7 @@ class ExerciseMuscleSerializer(serializers.ModelSerializer):
 class ExerciseMediaSerializer(serializers.ModelSerializer):
     class Meta:
         model = ExerciseMedia
-        fields = ('id', 'media_type', 'title', 'file', 'external_url', 'thumbnail', 'order')
+        fields = ('id', 'exercise', 'media_type', 'title', 'file', 'external_url', 'thumbnail', 'order')
 
 
 class ExerciseListSerializer(serializers.ModelSerializer):
