@@ -1,5 +1,6 @@
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -14,10 +15,12 @@ from .serializers import (
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'auth'
 
 
 class AdminUserListView(generics.ListAPIView):
-    """Permite al administrador ver la lista de todos los usuarios registrados y sus métricas."""
+    """Allows admins to list all registered users and their metrics."""
     queryset = User.objects.all().order_by('-date_joined')
     serializer_class = AdminUserListSerializer
     permission_classes = [permissions.IsAdminUser]
@@ -27,13 +30,15 @@ class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserRegistrationSerializer
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'auth'
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
 
-        # Generar tokens automáticamente al registrarse
+        # Automatically generate tokens on registration
         refresh = RefreshToken.for_user(user)
 
         return Response({

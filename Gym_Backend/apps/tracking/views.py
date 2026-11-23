@@ -1,4 +1,6 @@
+import uuid
 from datetime import datetime, time
+from decimal import Decimal, InvalidOperation
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.pagination import PageNumberPagination
@@ -82,6 +84,27 @@ def _parse_query_datetime(raw_value, end_of_day=False):
     return None
 
 
+def _parse_uuid(raw_value):
+    if not raw_value:
+        return None
+    try:
+        return uuid.UUID(str(raw_value))
+    except (TypeError, ValueError):
+        return None
+
+
+def _parse_optional_rpe(raw_value):
+    if raw_value is None or (isinstance(raw_value, str) and not raw_value.strip()):
+        return None, None
+    try:
+        dec = Decimal(str(raw_value).strip().replace(',', '.'))
+    except (InvalidOperation, ValueError, TypeError):
+        return None, 'RPE must be a number between 1 and 10.'
+    if not dec.is_finite() or dec < Decimal('1.0') or dec > Decimal('10.0'):
+        return None, 'RPE must be between 1.0 and 10.0.'
+    return dec.quantize(Decimal('0.1')), None
+
+
 class WorkoutSessionViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -111,7 +134,8 @@ class WorkoutSessionViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         title = serializer.validated_data.get('title', '')
         routine = serializer.validated_data.get('routine')
-        if routine is None and title == 'Entrenamiento Móvil':
+        # Legacy compatibility for loose workout sessions without a routine
+        if routine is None and title in ('Mobile Workout', 'Entrenamiento Móvil'):
             serializer.save(user=self.request.user, status='cancelled')
         else:
             serializer.save(user=self.request.user)
@@ -124,7 +148,7 @@ class WorkoutSessionViewSet(viewsets.ModelViewSet):
                 is_completed=False,
                 end_time__isnull=True,
             )
-            .exclude(routine__isnull=True, title='Entrenamiento Móvil')
+            .exclude(routine__isnull=True, title__in=('Mobile Workout', 'Entrenamiento Móvil'))
             .select_related('routine', 'routine_day__routine')
             .order_by('-start_time')
             .first()
@@ -132,7 +156,7 @@ class WorkoutSessionViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'], url_path='start')
     def start_session(self, request):
-        """Inicia una sesión para la rutina indicada o devuelve la sesión activa existente."""
+        """Starts a session for the given routine or returns the existing active session."""
         existing = self._get_active_session(request.user)
         if existing:
             return Response(WorkoutSessionDetailSerializer(existing).data)
@@ -140,17 +164,23 @@ class WorkoutSessionViewSet(viewsets.ModelViewSet):
         routine_id = request.data.get('routine_id') or request.data.get('routine')
         routine = None
         if routine_id:
+            parsed_rid = _parse_uuid(routine_id)
+            if not parsed_rid:
+                return Response(
+                    {'detail': 'Invalid routine ID.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
             routine = (
                 Routine.objects.filter(
                     Q(user=request.user) | Q(is_template=True),
-                    pk=routine_id,
+                    pk=parsed_rid,
                 )
                 .prefetch_related('days')
                 .first()
             )
             if routine is None:
                 return Response(
-                    {'detail': 'Rutina no encontrada.'},
+                    {'detail': 'Routine not found.'},
                     status=status.HTTP_404_NOT_FOUND,
                 )
 
@@ -158,7 +188,7 @@ class WorkoutSessionViewSet(viewsets.ModelViewSet):
             user=request.user,
             routine=routine,
             routine_day=routine.days.first() if routine else None,
-            title=routine.title if routine else (request.data.get('title') or 'Entrenamiento'),
+            title=routine.title if routine else (request.data.get('title') or 'Workout'),
             start_time=timezone.now(),
             status='active',
             is_completed=False,
@@ -169,11 +199,11 @@ class WorkoutSessionViewSet(viewsets.ModelViewSet):
         )
 
     def finish_active(self, request):
-        """Finaliza la sesión activa del usuario autenticado."""
+        """Finishes the active session of the authenticated user."""
         session = self._get_active_session(request.user)
         if not session:
             return Response(
-                {'detail': 'No hay sesión activa.'},
+                {'detail': 'No active session found.'},
                 status=status.HTTP_404_NOT_FOUND,
             )
         now = timezone.now()
@@ -184,16 +214,23 @@ class WorkoutSessionViewSet(viewsets.ModelViewSet):
             session.duration_seconds = max(
                 1, int((now - session.start_time).total_seconds())
             )
-        session.perceived_effort_rpe = request.data.get(
-            'perceived_effort_rpe', session.perceived_effort_rpe
-        )
-        session.notes = request.data.get('notes', session.notes)
+        if 'perceived_effort_rpe' in request.data:
+            rpe_val, rpe_err = _parse_optional_rpe(request.data.get('perceived_effort_rpe'))
+            if rpe_err:
+                return Response(
+                    {'perceived_effort_rpe': [rpe_err]},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            session.perceived_effort_rpe = rpe_val
+        if 'notes' in request.data:
+            raw_notes = request.data.get('notes')
+            session.notes = '' if raw_notes is None else str(raw_notes)
         session.save()
         return Response(WorkoutSessionDetailSerializer(session).data)
 
     @action(detail=True, methods=['post'], url_path='finish')
     def finish_session(self, request, pk=None):
-        """Finaliza la sesión actual de entrenamiento."""
+        """Finishes the current workout session."""
         session = self.get_object()
         now = timezone.now()
         session.end_time = now
@@ -203,14 +240,23 @@ class WorkoutSessionViewSet(viewsets.ModelViewSet):
             session.duration_seconds = max(
                 1, int((now - session.start_time).total_seconds())
             )
-        session.perceived_effort_rpe = request.data.get('perceived_effort_rpe', session.perceived_effort_rpe)
-        session.notes = request.data.get('notes', session.notes)
+        if 'perceived_effort_rpe' in request.data:
+            rpe_val, rpe_err = _parse_optional_rpe(request.data.get('perceived_effort_rpe'))
+            if rpe_err:
+                return Response(
+                    {'perceived_effort_rpe': [rpe_err]},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            session.perceived_effort_rpe = rpe_val
+        if 'notes' in request.data:
+            raw_notes = request.data.get('notes')
+            session.notes = '' if raw_notes is None else str(raw_notes)
         session.save()
         return Response(WorkoutSessionDetailSerializer(session).data)
 
     @action(detail=False, methods=['post'], url_path='cancel')
     def cancel_session(self, request):
-        """Descarta la sesión activa del usuario autenticado."""
+        """Cancels the active session of the authenticated user."""
         session = self._get_active_session(request.user)
         if session:
             session.status = 'cancelled'
@@ -222,7 +268,7 @@ class WorkoutSessionViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], url_path='active')
     def active_session(self, request):
-        """Retorna la sesión activa del usuario autenticado o null."""
+        """Returns the authenticated user's active session or null."""
         session = self._get_active_session(request.user)
         if not session:
             return Response(None)
@@ -235,43 +281,47 @@ class WorkoutSessionViewSet(viewsets.ModelViewSet):
             is_completed=True,
         )
 
-        desde_raw = (
-            request.query_params.get('desde')
-            or request.query_params.get('from')
+        # Supports standard 'from'/'to' alongside legacy 'desde'/'hasta' query params
+        from_raw = (
+            request.query_params.get('from')
             or request.query_params.get('start_date')
+            or request.query_params.get('desde')
         )
-        hasta_raw = (
-            request.query_params.get('hasta')
-            or request.query_params.get('to')
+        to_raw = (
+            request.query_params.get('to')
             or request.query_params.get('end_date')
+            or request.query_params.get('hasta')
         )
         routine_id = (
             request.query_params.get('routine_id')
             or request.query_params.get('routine')
         )
 
-        desde_dt = _parse_query_datetime(desde_raw, end_of_day=False)
-        hasta_dt = _parse_query_datetime(hasta_raw, end_of_day=True)
+        from_dt = _parse_query_datetime(from_raw, end_of_day=False)
+        to_dt = _parse_query_datetime(to_raw, end_of_day=True)
 
-        if desde_dt is not None:
+        if from_dt is not None:
             qs = qs.filter(
-                Q(end_time__gte=desde_dt)
-                | Q(end_time__isnull=True, start_time__gte=desde_dt)
+                Q(end_time__gte=from_dt)
+                | Q(end_time__isnull=True, start_time__gte=from_dt)
             )
-        if hasta_dt is not None:
+        if to_dt is not None:
             qs = qs.filter(
-                Q(end_time__lte=hasta_dt)
-                | Q(end_time__isnull=True, start_time__lte=hasta_dt)
+                Q(end_time__lte=to_dt)
+                | Q(end_time__isnull=True, start_time__lte=to_dt)
             )
         if routine_id:
+            parsed_rid = _parse_uuid(routine_id)
+            if not parsed_rid:
+                return qs.none()
             qs = qs.filter(
-                Q(routine_id=routine_id) | Q(routine_day__routine_id=routine_id)
+                Q(routine_id=parsed_rid) | Q(routine_day__routine_id=parsed_rid)
             )
         return qs
 
     @action(detail=False, methods=['get'], url_path='history')
     def history(self, request):
-        """Retorna las sesiones completadas del usuario paginadas (20/pág.) con métricas agregadas."""
+        """Returns paginated completed sessions (20/page) with aggregate metrics."""
         qs = self._filter_completed_sessions_qs(request)
 
         totals = qs.aggregate(
@@ -324,13 +374,13 @@ class WorkoutSessionViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['get'], url_path='detail')
     def session_detail(self, request, pk=None):
-        """Retorna el detalle completo de una sesión del usuario autenticado."""
+        """Returns the full detail of an authenticated user's session."""
         session = self.get_object()
         return Response(WorkoutSessionDetailSerializer(session).data)
 
     @action(detail=False, methods=['get'], url_path='routine-summary')
     def routine_summary(self, request):
-        """Retorna el resumen agrupado por rutina para las sesiones completadas del usuario."""
+        """Returns a routine-grouped summary for the user's completed sessions."""
         qs = self._filter_completed_sessions_qs(request)
         rows = (
             qs.annotate(
@@ -353,7 +403,7 @@ class WorkoutSessionViewSet(viewsets.ModelViewSet):
         grouped = {}
         for row in rows:
             rid = str(row['resolved_routine_id']) if row['resolved_routine_id'] else None
-            rname = row['resolved_routine_name'] or 'Rutina'
+            rname = row['resolved_routine_name'] or 'Routine'
             key = rid or f'unlinked:{rname}'
             sess_count = int(row['sessions_count'] or 0)
             tot_dur = int(row['total_duration_seconds'] or 0)
@@ -411,11 +461,11 @@ class WorkoutSetLogViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         set_log = serializer.save()
-        # Verificar y actualizar récord personal (PR)
+        # Check and update personal record (PR)
         exercise = set_log.log_exercise.exercise
         user = self.request.user
 
-        # Máximo peso levantado
+        # Maximum weight lifted
         current_max = PersonalRecord.objects.filter(
             user=user, exercise=exercise, record_type='max_weight'
         ).first()
@@ -430,7 +480,7 @@ class WorkoutSetLogViewSet(viewsets.ModelViewSet):
 
 
 class ExerciseProgressionView(APIView):
-    """Retorna el historial cronológico de pesos, 1RM estimado y peso corporal del usuario."""
+    """Returns chronological lift weight history, estimated 1RM, and user body weight."""
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, exercise_id):
@@ -488,7 +538,7 @@ class ExerciseProgressionView(APIView):
 
 
 class Weight1RMProgressView(APIView):
-    """Cruza el historial de peso corporal (BodyWeightLog) con el 1RM estimado por fecha."""
+    """Crosses body weight history (BodyWeightLog) with estimated 1RM by date."""
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
@@ -501,7 +551,13 @@ class Weight1RMProgressView(APIView):
         ).select_related('log_exercise__exercise').order_by('logged_at')
 
         if exercise_id:
-            sets_qs = sets_qs.filter(log_exercise__exercise_id=exercise_id)
+            parsed_eid = _parse_uuid(exercise_id)
+            if not parsed_eid:
+                return Response(
+                    {'detail': 'Invalid exercise ID.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            sets_qs = sets_qs.filter(log_exercise__exercise_id=parsed_eid)
 
         weight_logs = list(
             BodyWeightLog.objects.filter(user=request.user).order_by('date', 'id').values('id', 'date', 'weight')

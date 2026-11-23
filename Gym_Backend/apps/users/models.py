@@ -4,11 +4,11 @@ from django.db import models
 from django.utils import timezone
 
 class CustomUserManager(BaseUserManager):
-    """Gestor personalizado de usuarios con email como identificador único."""
+    """Custom user manager using email as the unique identifier."""
 
     def create_user(self, email, password=None, **extra_fields):
         if not email:
-            raise ValueError("El email es obligatorio")
+            raise ValueError("Email is required")
         email = self.normalize_email(email)
         user = self.model(email=email, **extra_fields)
         if password:
@@ -24,9 +24,9 @@ class CustomUserManager(BaseUserManager):
         extra_fields.setdefault('is_active', True)
 
         if extra_fields.get('is_staff') is not True:
-            raise ValueError("Superuser debe tener is_staff=True.")
+            raise ValueError("Superuser must have is_staff=True.")
         if extra_fields.get('is_superuser') is not True:
-            raise ValueError("Superuser debe tener is_superuser=True.")
+            raise ValueError("Superuser must have is_superuser=True.")
 
         return self.create_user(email, password, **extra_fields)
 
@@ -34,48 +34,48 @@ class CustomUserManager(BaseUserManager):
 class User(AbstractUser):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     username = models.CharField(max_length=50, blank=True, null=True)
-    email = models.EmailField('correo electrónico', unique=True)
+    email = models.EmailField('email address', unique=True)
     avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
     
     EXPERIENCE_CHOICES = [
-        ('beginner', 'Principiante'),
-        ('intermediate', 'Intermedio'),
-        ('advanced', 'Avanzado'),
+        ('beginner', 'Beginner'),
+        ('intermediate', 'Intermediate'),
+        ('advanced', 'Advanced'),
     ]
     experience_level = models.CharField(
         max_length=20, 
         choices=EXPERIENCE_CHOICES, 
         default='beginner',
-        verbose_name='Nivel de experiencia'
+        verbose_name='Experience level'
     )
     current_weight = models.DecimalField(
         max_digits=5, 
         decimal_places=2, 
         null=True, 
         blank=True,
-        verbose_name='Peso actual (kg)'
+        verbose_name='Current weight (kg)'
     )
     height = models.DecimalField(
         max_digits=5, 
         decimal_places=2, 
         null=True, 
         blank=True,
-        verbose_name='Estatura (cm)'
+        verbose_name='Height (cm)'
     )
     TRAINING_GOAL_CHOICES = [
-        ('hypertrophy', 'Hipertrofia / Ganancia muscular'),
-        ('strength', 'Fuerza máxima'),
-        ('weight_loss', 'Pérdida de grasa / Definición'),
-        ('endurance', 'Resistencia / Recomposición'),
-        ('general_fitness', 'Salud y condición general'),
+        ('hypertrophy', 'Hypertrophy / Muscle gain'),
+        ('strength', 'Maximum strength'),
+        ('weight_loss', 'Fat loss / Cutting'),
+        ('endurance', 'Endurance / Recomposition'),
+        ('general_fitness', 'General fitness & health'),
     ]
     training_goal = models.CharField(
         max_length=30,
         choices=TRAINING_GOAL_CHOICES,
         default='hypertrophy',
-        verbose_name='Objetivo de entrenamiento'
+        verbose_name='Training goal'
     )
-    bio = models.TextField(blank=True, verbose_name='Biografía / Objetivos')
+    bio = models.TextField(blank=True, verbose_name='Bio / Goals')
 
     objects = CustomUserManager()
 
@@ -83,8 +83,8 @@ class User(AbstractUser):
     REQUIRED_FIELDS = []
 
     class Meta:
-        verbose_name = 'Usuario'
-        verbose_name_plural = 'Usuarios'
+        verbose_name = 'User'
+        verbose_name_plural = 'Users'
 
     def __str__(self):
         return self.email
@@ -95,19 +95,19 @@ class BodyWeightLog(models.Model):
         User,
         on_delete=models.CASCADE,
         related_name='weight_logs',
-        verbose_name='Usuario'
+        verbose_name='User'
     )
     weight = models.DecimalField(
         max_digits=5,
         decimal_places=2,
-        verbose_name='Peso corporal (kg)'
+        verbose_name='Body weight (kg)'
     )
-    date = models.DateField(default=timezone.localdate, verbose_name='Fecha de registro')
+    date = models.DateField(default=timezone.localdate, verbose_name='Log date')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        verbose_name = 'Registro de Peso Corporal'
-        verbose_name_plural = 'Historial de Peso Corporal'
+        verbose_name = 'Body Weight Log'
+        verbose_name_plural = 'Body Weight History'
         ordering = ['-date', '-id']
 
     def __str__(self):

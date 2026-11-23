@@ -4,5 +4,5 @@ class TrackingConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'apps.tracking'
     label = 'tracking'
-    verbose_name = 'Registro de Entrenamientos y Progresión'
+    verbose_name = 'Workout Tracking & Progression'
 

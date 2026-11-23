@@ -2,10 +2,10 @@ from django.core.management.base import BaseCommand
 from apps.catalog.models import Equipment, MuscleGroup, Exercise, ExerciseMuscle
 
 class Command(BaseCommand):
-    help = 'Puebla la base de datos con grupos musculares, máquinas principales y ejercicios de ejemplo'
+    help = 'Seeds the database with muscle groups, core equipment, and sample exercises'
 
     def handle(self, *args, **options):
-        self.stdout.write("Creando grupos musculares...")
+        self.stdout.write("Creating muscle groups...")
         muscles_data = [
             ('Pecho / Pectoral', 'Torso'),
             ('Dorsal / Espalda', 'Torso'),
@@ -26,7 +26,7 @@ class Command(BaseCommand):
             m, _ = MuscleGroup.objects.get_or_create(name=name, defaults={'body_part': part})
             muscles[name] = m
 
-        self.stdout.write("Creando máquinas y equipamiento...")
+        self.stdout.write("Creating machines and equipment...")
         equipment_data = [
             {
                 'name': 'Prensa de Piernas a 45°',
@@ -77,7 +77,7 @@ class Command(BaseCommand):
             eq, _ = Equipment.objects.get_or_create(name=eq_data['name'], defaults=eq_data)
             equipments[eq.name] = eq
 
-        self.stdout.write("Creando ejercicios base con máquinas...")
+        self.stdout.write("Creating base machine exercises...")
         exercises_data = [
             {
                 'name': 'Prensa de Piernas 45°',
@@ -123,5 +123,5 @@ class Command(BaseCommand):
                 if secondary:
                     ExerciseMuscle.objects.create(exercise=ex, muscle=secondary, role='secondary')
 
-        self.stdout.write(self.style.SUCCESS("¡Catálogo base inicializado con éxito!"))
+        self.stdout.write(self.style.SUCCESS("Base catalog seeded successfully!"))
 

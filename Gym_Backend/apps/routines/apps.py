@@ -4,5 +4,5 @@ class RoutinesConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'apps.routines'
     label = 'routines'
-    verbose_name = 'Rutinas y Planes de Entrenamiento'
+    verbose_name = 'Routines & Training Plans'
 

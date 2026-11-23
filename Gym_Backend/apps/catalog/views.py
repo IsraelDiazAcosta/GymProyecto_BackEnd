@@ -1,3 +1,4 @@
+import uuid
 from django.db import transaction
 from django.db.models import Exists, OuterRef, Value, BooleanField, Prefetch
 from rest_framework import viewsets, permissions, filters, status
@@ -121,9 +122,15 @@ class ExerciseViewSet(viewsets.ModelViewSet):
         difficulty = self.request.query_params.get('difficulty')
 
         if equipment_id:
-            queryset = queryset.filter(equipment_id=equipment_id)
+            try:
+                queryset = queryset.filter(equipment_id=int(equipment_id))
+            except (TypeError, ValueError):
+                return queryset.none()
         if muscle_id:
-            queryset = queryset.filter(muscles__id=muscle_id)
+            try:
+                queryset = queryset.filter(muscles__id=int(muscle_id))
+            except (TypeError, ValueError):
+                return queryset.none()
         if difficulty:
             queryset = queryset.filter(difficulty=difficulty)
 
@@ -164,6 +171,10 @@ class ExerciseMediaViewSet(viewsets.ModelViewSet):
         queryset = super().get_queryset()
         exercise_id = self.request.query_params.get('exercise')
         if exercise_id:
-            queryset = queryset.filter(exercise_id=exercise_id)
+            try:
+                parsed_id = uuid.UUID(str(exercise_id))
+            except (TypeError, ValueError):
+                return queryset.none()
+            queryset = queryset.filter(exercise_id=parsed_id)
         return queryset
 

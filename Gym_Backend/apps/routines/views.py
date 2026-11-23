@@ -1,8 +1,9 @@
+import uuid
 from django.db import transaction
 from django.db.models import Q
-from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from apps.catalog.models import Exercise
 from .models import Routine, RoutineDay, RoutineExercise, RoutineSet
@@ -14,8 +15,18 @@ from .serializers import (
     RoutineSetSerializer,
 )
 
+
+class IsRoutineOwnerOrReadOnlyTemplate(permissions.BasePermission):
+    """Allows reading or cloning public templates, while only the owner or an admin can modify or delete them."""
+
+    def has_object_permission(self, request, view, obj):
+        if request.method in permissions.SAFE_METHODS or getattr(view, 'action', None) == 'clone_routine':
+            return True
+        return bool(obj.user_id == request.user.id or request.user.is_staff)
+
+
 class RoutineViewSet(viewsets.ModelViewSet):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsRoutineOwnerOrReadOnlyTemplate]
 
     def get_serializer_class(self):
         if self.action == 'list':
@@ -24,14 +35,14 @@ class RoutineViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        # Muestra rutinas del usuario y plantillas públicas
+        # Show routines owned by the user as well as public templates
         return Routine.objects.filter(
             Q(user=user) | Q(is_template=True)
         ).prefetch_related('days__exercises__target_sets', 'days__exercises__exercise')
 
     @staticmethod
     def _extract_exercise_ids(data):
-        """Obtiene la lista de UUIDs de ejercicios aceptando exercise_ids, exercise_id o exercise."""
+        """Extracts the list of exercise UUIDs from exercise_ids, exercise_id, or exercise."""
         raw_ids = data.get('exercise_ids')
         single_id = data.get('exercise_id') or data.get('exercise')
         if isinstance(raw_ids, list) and raw_ids:
@@ -41,25 +52,33 @@ class RoutineViewSet(viewsets.ModelViewSet):
         return []
 
     @staticmethod
-    def _safe_pos_int(raw, default):
+    def _safe_pos_int(raw, default, max_val=None):
         try:
             val = int(raw)
-            return val if val >= 1 else default
+            if val < 1:
+                return default
+            return min(val, max_val) if max_val is not None else val
         except (TypeError, ValueError):
             return default
 
     @staticmethod
     def _add_exercises_to_day(day, ids_to_add, data):
-        """Crea RoutineExercise y RoutineSet para los ejercicios indicados en un día de rutina."""
-        sets_count = RoutineViewSet._safe_pos_int(data.get('sets_count'), 4)
-        min_reps = RoutineViewSet._safe_pos_int(data.get('min_reps'), 8)
-        max_reps = max(min_reps, RoutineViewSet._safe_pos_int(data.get('max_reps'), 12))
-        rest_seconds = RoutineViewSet._safe_pos_int(data.get('rest_seconds'), 90)
+        """Creates RoutineExercise and RoutineSet entries for the given exercises in a routine day."""
+        sets_count = RoutineViewSet._safe_pos_int(data.get('sets_count'), 4, max_val=30)
+        min_reps = RoutineViewSet._safe_pos_int(data.get('min_reps'), 8, max_val=1000)
+        max_reps = max(min_reps, RoutineViewSet._safe_pos_int(data.get('max_reps'), 12, max_val=1000))
+        rest_seconds = RoutineViewSet._safe_pos_int(data.get('rest_seconds'), 90, max_val=3600)
         notes = data.get('notes', '') or ''
         next_order = day.exercises.count() + 1
 
         for eid in ids_to_add:
-            exercise = get_object_or_404(Exercise, pk=eid)
+            try:
+                parsed_eid = uuid.UUID(str(eid))
+            except (TypeError, ValueError):
+                raise ValidationError({'exercise_ids': f'Invalid exercise ID: {eid}'})
+            exercise = Exercise.objects.filter(pk=parsed_eid).first()
+            if not exercise:
+                raise ValidationError({'exercise_ids': f'Exercise not found: {eid}'})
             routine_ex = RoutineExercise.objects.create(
                 routine_day=day,
                 exercise=exercise,
@@ -79,25 +98,25 @@ class RoutineViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         with transaction.atomic():
             routine = serializer.save(user=self.request.user)
-            day = RoutineDay.objects.create(routine=routine, name='Día 1', order=1)
+            day = RoutineDay.objects.create(routine=routine, name='Day 1', order=1)
             ids_to_add = self._extract_exercise_ids(self.request.data)
             if ids_to_add:
                 self._add_exercises_to_day(day, ids_to_add, self.request.data)
 
     @action(detail=True, methods=['post'], url_path='add-exercise')
     def add_exercise(self, request, pk=None):
-        """Agrega uno o más ejercicios del catálogo a la rutina con sus series y repeticiones objetivo."""
+        """Adds one or more catalog exercises to the routine with their target sets and rep ranges."""
         ids_to_add = self._extract_exercise_ids(request.data)
         if not ids_to_add:
             return Response(
-                {'detail': 'Debes seleccionar al menos un ejercicio.'},
+                {'detail': 'You must select at least one exercise.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         with transaction.atomic():
             routine = self.get_object()
             day = routine.days.first()
             if not day:
-                day = RoutineDay.objects.create(routine=routine, name='Día 1', order=1)
+                day = RoutineDay.objects.create(routine=routine, name='Day 1', order=1)
 
             self._add_exercises_to_day(day, ids_to_add, request.data)
 
@@ -106,11 +125,11 @@ class RoutineViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'], url_path='clone')
     def clone_routine(self, request, pk=None):
-        """Permite a un usuario clonar una plantilla a su cuenta personal."""
+        """Allows a user to clone a template into their personal account."""
         original = self.get_object()
         new_routine = Routine.objects.create(
             user=request.user,
-            title=f"{original.title} (Mi copia)",
+            title=f"{original.title} (My copy)",
             description=original.description,
             is_template=False,
             is_active=True,

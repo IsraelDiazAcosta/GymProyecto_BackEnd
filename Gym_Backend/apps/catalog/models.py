@@ -16,11 +16,11 @@ def validate_image(file):
         file.seek(0)
     max_size = 5 * 1024 * 1024  # 5 MB
     if file.size > max_size:
-        raise ValidationError('El tamaño máximo de imagen permitido es 5 MB.')
+        raise ValidationError('Maximum allowed image size is 5 MB.')
     valid_extensions = ('.jpg', '.jpeg', '.png', '.webp')
     ext = os.path.splitext(file.name)[1].lower()
     if ext not in valid_extensions:
-        raise ValidationError('Formato no válido. Usa imágenes JPG, PNG o WebP.')
+        raise ValidationError('Invalid format. Use JPG, PNG, or WebP images.')
 
 
 def optimize_image(image_field):
@@ -69,26 +69,26 @@ def delete_old_file_on_update(instance, model_class, field_name='image'):
 
 class Equipment(models.Model):
     EQUIPMENT_TYPES = [
-        ('plate_loaded', 'Máquina de discos / palanca'),
-        ('pin_selected', 'Máquina de placas / pines'),
-        ('cable', 'Polea / Cable'),
-        ('smith', 'Barra guiada / Multipower'),
-        ('free_weight', 'Peso libre (Mancuernas / Barras)'),
-        ('bodyweight', 'Peso corporal / Calistenia'),
+        ('plate_loaded', 'Plate-Loaded Machine'),
+        ('pin_selected', 'Pin-Selected Machine'),
+        ('cable', 'Cable / Pulley'),
+        ('smith', 'Smith Machine'),
+        ('free_weight', 'Free Weight (Dumbbells / Barbells)'),
+        ('bodyweight', 'Bodyweight / Calisthenics'),
         ('cardio', 'Cardio'),
-        ('accessory', 'Accesorio / Banco'),
+        ('accessory', 'Accessory / Bench'),
     ]
 
-    name = models.CharField(max_length=120, unique=True, verbose_name='Nombre de la máquina / equipo')
-    equipment_type = models.CharField(max_length=30, choices=EQUIPMENT_TYPES, default='plate_loaded', verbose_name='Tipo de equipo')
-    brand = models.CharField(max_length=100, blank=True, verbose_name='Marca (ej. Hammer Strength, Life Fitness)')
-    image = models.ImageField(upload_to='equipment/', null=True, blank=True, validators=[validate_image], verbose_name='Foto de la máquina')
-    description = models.TextField(blank=True, verbose_name='Descripción')
-    setup_guide = models.TextField(blank=True, verbose_name='Guía de ajuste (asiento, rodillos, pernos)')
+    name = models.CharField(max_length=120, unique=True, verbose_name='Machine / equipment name')
+    equipment_type = models.CharField(max_length=30, choices=EQUIPMENT_TYPES, default='plate_loaded', verbose_name='Equipment type')
+    brand = models.CharField(max_length=100, blank=True, verbose_name='Brand (e.g. Hammer Strength, Life Fitness)')
+    image = models.ImageField(upload_to='equipment/', null=True, blank=True, validators=[validate_image], verbose_name='Machine photo')
+    description = models.TextField(blank=True, verbose_name='Description')
+    setup_guide = models.TextField(blank=True, verbose_name='Setup guide (seat, pads, pins)')
 
     class Meta:
-        verbose_name = 'Equipo / Máquina'
-        verbose_name_plural = 'Equipos y Máquinas'
+        verbose_name = 'Equipment / Machine'
+        verbose_name_plural = 'Equipment & Machines'
         ordering = ['name']
 
     def save(self, *args, **kwargs):
@@ -104,12 +104,12 @@ class Equipment(models.Model):
 
 
 class MuscleGroup(models.Model):
-    name = models.CharField(max_length=80, unique=True, verbose_name='Grupo muscular')
-    body_part = models.CharField(max_length=50, verbose_name='Zona anatómica (Torso, Pierna, Brazo, etc.)')
+    name = models.CharField(max_length=80, unique=True, verbose_name='Muscle group')
+    body_part = models.CharField(max_length=50, verbose_name='Body part (Chest, Legs, Arm, etc.)')
 
     class Meta:
-        verbose_name = 'Grupo Muscular'
-        verbose_name_plural = 'Grupos Musculares'
+        verbose_name = 'Muscle Group'
+        verbose_name_plural = 'Muscle Groups'
         ordering = ['body_part', 'name']
 
     def __str__(self):
@@ -118,17 +118,17 @@ class MuscleGroup(models.Model):
 
 class Exercise(models.Model):
     MECHANICS_CHOICES = [
-        ('compound', 'Multiarticular / Compuesto'),
-        ('isolation', 'Monoarticular / Aislamiento'),
+        ('compound', 'Compound'),
+        ('isolation', 'Isolation'),
     ]
     DIFFICULTY_CHOICES = [
-        ('beginner', 'Principiante'),
-        ('intermediate', 'Intermedio'),
-        ('advanced', 'Avanzado'),
+        ('beginner', 'Beginner'),
+        ('intermediate', 'Intermediate'),
+        ('advanced', 'Advanced'),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name = models.CharField(max_length=150, unique=True, verbose_name='Nombre del ejercicio')
+    name = models.CharField(max_length=150, unique=True, verbose_name='Exercise name')
     slug = models.SlugField(max_length=160, unique=True, blank=True)
     equipment = models.ForeignKey(
         Equipment,
@@ -136,26 +136,26 @@ class Exercise(models.Model):
         null=True,
         blank=True,
         related_name='exercises',
-        verbose_name='Máquina o equipo utilizado'
+        verbose_name='Assigned machine or equipment'
     )
     muscles = models.ManyToManyField(
         MuscleGroup,
         through='ExerciseMuscle',
         related_name='exercises',
-        verbose_name='Músculos involucrados'
+        verbose_name='Targeted muscles'
     )
-    mechanics = models.CharField(max_length=20, choices=MECHANICS_CHOICES, default='compound', verbose_name='Mecánica')
-    difficulty = models.CharField(max_length=20, choices=DIFFICULTY_CHOICES, default='beginner', verbose_name='Dificultad')
-    image = models.ImageField(upload_to='exercises/', null=True, blank=True, validators=[validate_image], verbose_name='Imagen del ejercicio')
-    instructions = models.TextField(verbose_name='Instrucciones de ejecución paso a paso')
-    tips = models.TextField(blank=True, verbose_name='Consejos técnicos y errores comunes')
+    mechanics = models.CharField(max_length=20, choices=MECHANICS_CHOICES, default='compound', verbose_name='Mechanics')
+    difficulty = models.CharField(max_length=20, choices=DIFFICULTY_CHOICES, default='beginner', verbose_name='Difficulty')
+    image = models.ImageField(upload_to='exercises/', null=True, blank=True, validators=[validate_image], verbose_name='Exercise image')
+    instructions = models.TextField(verbose_name='Step-by-step execution instructions')
+    tips = models.TextField(blank=True, verbose_name='Technical tips and common mistakes')
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        verbose_name = 'Ejercicio'
-        verbose_name_plural = 'Ejercicios'
+        verbose_name = 'Exercise'
+        verbose_name_plural = 'Exercises'
         ordering = ['name']
 
     def save(self, *args, **kwargs):
@@ -174,9 +174,9 @@ class Exercise(models.Model):
 
 class ExerciseMuscle(models.Model):
     ROLE_CHOICES = [
-        ('primary', 'Agonista (Músculo Principal)'),
-        ('secondary', 'Sinergista (Secundario)'),
-        ('stabilizer', 'Estabilizador'),
+        ('primary', 'Agonist (Primary Muscle)'),
+        ('secondary', 'Synergist (Secondary)'),
+        ('stabilizer', 'Stabilizer'),
     ]
 
     exercise = models.ForeignKey(Exercise, on_delete=models.CASCADE, related_name='exercise_muscles')
@@ -184,8 +184,8 @@ class ExerciseMuscle(models.Model):
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='primary')
 
     class Meta:
-        verbose_name = 'Músculo del Ejercicio'
-        verbose_name_plural = 'Músculos del Ejercicio'
+        verbose_name = 'Exercise Muscle'
+        verbose_name_plural = 'Exercise Muscles'
         unique_together = ('exercise', 'muscle')
 
     def __str__(self):
@@ -194,26 +194,26 @@ class ExerciseMuscle(models.Model):
 
 class ExerciseMedia(models.Model):
     MEDIA_TYPES = [
-        ('image', 'Imagen / Foto'),
-        ('video', 'Video demostrativo'),
-        ('gif', 'GIF animado'),
+        ('image', 'Image / Photo'),
+        ('video', 'Demo video'),
+        ('gif', 'Animated GIF'),
     ]
 
     exercise = models.ForeignKey(Exercise, on_delete=models.CASCADE, related_name='media')
     media_type = models.CharField(max_length=10, choices=MEDIA_TYPES, default='video')
-    title = models.CharField(max_length=100, blank=True, verbose_name='Título o vista (ej. Vista lateral)')
-    file = models.FileField(upload_to='exercises/media/', null=True, blank=True, verbose_name='Archivo subido')
-    external_url = models.URLField(blank=True, verbose_name='Enlace externo (YouTube, Vimeo, CDN)')
-    thumbnail = models.ImageField(upload_to='exercises/thumbnails/', null=True, blank=True, verbose_name='Miniatura')
-    order = models.PositiveSmallIntegerField(default=0, verbose_name='Orden')
+    title = models.CharField(max_length=100, blank=True, verbose_name='Title or view (e.g. Side view)')
+    file = models.FileField(upload_to='exercises/media/', null=True, blank=True, verbose_name='Uploaded file')
+    external_url = models.URLField(blank=True, verbose_name='External link (YouTube, Vimeo, CDN)')
+    thumbnail = models.ImageField(upload_to='exercises/thumbnails/', null=True, blank=True, verbose_name='Thumbnail')
+    order = models.PositiveSmallIntegerField(default=0, verbose_name='Order')
 
     class Meta:
-        verbose_name = 'Material Multimedia del Ejercicio'
-        verbose_name_plural = 'Materiales Multimedia'
+        verbose_name = 'Exercise Media'
+        verbose_name_plural = 'Exercise Media Items'
         ordering = ['order', 'id']
 
     def __str__(self):
-        return f"{self.exercise.name} - {self.get_media_type_display()} ({self.title or 'Sin título'})"
+        return f"{self.exercise.name} - {self.get_media_type_display()} ({self.title or 'Untitled'})"
 
 
 class UserFavoriteEquipment(models.Model):
@@ -230,8 +230,8 @@ class UserFavoriteEquipment(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        verbose_name = 'Máquina Favorita'
-        verbose_name_plural = 'Máquinas Favoritas'
+        verbose_name = 'Favorite Equipment'
+        verbose_name_plural = 'Favorite Equipment'
         unique_together = ('user', 'equipment')
         ordering = ['-created_at']
 
@@ -253,8 +253,8 @@ class UserFavoriteExercise(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        verbose_name = 'Ejercicio Favorito'
-        verbose_name_plural = 'Ejercicios Favoritos'
+        verbose_name = 'Favorite Exercise'
+        verbose_name_plural = 'Favorite Exercises'
         unique_together = ('user', 'exercise')
         ordering = ['-created_at']
 

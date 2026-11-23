@@ -1,10 +1,29 @@
+from decimal import Decimal
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from apps.catalog.models import validate_image
+from apps.catalog.serializers import FlexibleImageField
 from .models import User, BodyWeightLog
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=6)
     password_confirm = serializers.CharField(write_only=True)
+    current_weight = serializers.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        min_value=Decimal('1.00'),
+        max_value=Decimal('500.00'),
+        required=False,
+        allow_null=True,
+    )
+    height = serializers.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        min_value=Decimal('0.50'),
+        max_value=Decimal('300.00'),
+        required=False,
+        allow_null=True,
+    )
 
     class Meta:
         model = User
@@ -13,7 +32,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         if attrs['password'] != attrs['password_confirm']:
-            raise serializers.ValidationError({"password": "Las contraseñas no coinciden."})
+            raise serializers.ValidationError({"password": "Passwords do not match."})
         return attrs
 
     def create(self, validated_data):
@@ -23,6 +42,24 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
+    avatar = FlexibleImageField(required=False, allow_null=True, validators=[validate_image])
+    current_weight = serializers.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        min_value=Decimal('1.00'),
+        max_value=Decimal('500.00'),
+        required=False,
+        allow_null=True,
+    )
+    height = serializers.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        min_value=Decimal('0.50'),
+        max_value=Decimal('300.00'),
+        required=False,
+        allow_null=True,
+    )
+
     class Meta:
         model = User
         fields = ('id', 'email', 'username', 'avatar', 'experience_level', 'training_goal', 'current_weight', 'height', 'bio', 'is_staff', 'date_joined')
@@ -30,7 +67,12 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
 
 class BodyWeightLogSerializer(serializers.ModelSerializer):
-    weight = serializers.DecimalField(max_digits=5, decimal_places=2, min_value=1)
+    weight = serializers.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        min_value=Decimal('1.00'),
+        max_value=Decimal('500.00'),
+    )
 
     class Meta:
         model = BodyWeightLog
@@ -39,7 +81,7 @@ class BodyWeightLogSerializer(serializers.ModelSerializer):
 
 
 class AdminUserListSerializer(serializers.ModelSerializer):
-    """Serializer para que el administrador pueda auditar a todos los usuarios."""
+    """Serializer allowing admins to audit all registered users."""
     routines_count = serializers.IntegerField(source='routines.count', read_only=True)
     workouts_count = serializers.IntegerField(source='workout_sessions.count', read_only=True)
 

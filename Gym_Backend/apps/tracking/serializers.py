@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.utils import timezone
 from rest_framework import serializers
 from apps.catalog.serializers import ExerciseListSerializer
@@ -5,6 +6,23 @@ from .models import WorkoutSession, WorkoutLogExercise, WorkoutSetLog, PersonalR
 
 class WorkoutSetLogSerializer(serializers.ModelSerializer):
     estimated_1rm = serializers.FloatField(read_only=True)
+    set_number = serializers.IntegerField(min_value=1, max_value=100, required=False, default=1)
+    weight = serializers.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        min_value=Decimal('0.01'),
+        max_value=Decimal('9999.99'),
+    )
+    reps = serializers.IntegerField(min_value=1, max_value=1000)
+    rpe = serializers.DecimalField(
+        max_digits=3,
+        decimal_places=1,
+        min_value=Decimal('1.0'),
+        max_value=Decimal('10.0'),
+        required=False,
+        allow_null=True,
+    )
+    rir = serializers.IntegerField(min_value=0, max_value=20, required=False, allow_null=True)
 
     class Meta:
         model = WorkoutSetLog
@@ -15,6 +33,13 @@ class WorkoutSetLogSerializer(serializers.ModelSerializer):
         )
         read_only_fields = ('id', 'logged_at')
 
+    def validate_log_exercise(self, value):
+        request = self.context.get('request')
+        if request and request.user and request.user.is_authenticated:
+            if value.session.user_id != request.user.id:
+                raise serializers.ValidationError('You do not have permission to log sets for this exercise.')
+        return value
+
 
 class WorkoutLogExerciseSerializer(serializers.ModelSerializer):
     exercise_detail = ExerciseListSerializer(source='exercise', read_only=True)
@@ -24,6 +49,13 @@ class WorkoutLogExerciseSerializer(serializers.ModelSerializer):
         model = WorkoutLogExercise
         fields = ('id', 'session', 'exercise', 'exercise_detail', 'order', 'notes', 'logged_sets')
         read_only_fields = ('id',)
+
+    def validate_session(self, value):
+        request = self.context.get('request')
+        if request and request.user and request.user.is_authenticated:
+            if value.user_id != request.user.id:
+                raise serializers.ValidationError('You do not have permission to log exercises in this session.')
+        return value
 
 
 class _WorkoutSessionCommonMixin(serializers.ModelSerializer):
@@ -62,7 +94,7 @@ class _WorkoutSessionCommonMixin(serializers.ModelSerializer):
         routine = self._resolve_routine(obj)
         if routine:
             return routine.title
-        return obj.title or 'Rutina'
+        return obj.title or 'Routine'
 
     def get_routine_detail(self, obj):
         routine = self._resolve_routine(obj)
@@ -153,6 +185,14 @@ class CompletedWorkoutSessionSerializer(WorkoutSessionListSerializer):
 
 class WorkoutSessionDetailSerializer(_WorkoutSessionCommonMixin):
     logged_exercises = WorkoutLogExerciseSerializer(many=True, read_only=True)
+    perceived_effort_rpe = serializers.DecimalField(
+        max_digits=3,
+        decimal_places=1,
+        min_value=Decimal('1.0'),
+        max_value=Decimal('10.0'),
+        required=False,
+        allow_null=True,
+    )
     has_logged_sets = serializers.SerializerMethodField()
     total_exercises = serializers.SerializerMethodField()
     total_sets = serializers.SerializerMethodField()
@@ -233,7 +273,7 @@ class WorkoutSessionDetailSerializer(_WorkoutSessionCommonMixin):
                     'exercise_name': bucket['exercise'].name,
                     'order': idx,
                     'unrecorded': False,
-                    'status': 'registrado',
+                    'status': 'recorded',
                     'sets': serialized_sets,
                 })
         else:
@@ -257,7 +297,7 @@ class WorkoutSessionDetailSerializer(_WorkoutSessionCommonMixin):
                             'exercise_name': routine_ex.exercise.name,
                             'order': idx,
                             'unrecorded': True,
-                            'status': 'sin registro',
+                            'status': 'unrecorded',
                             'planned_sets': sets_count,
                             'planned_reps': planned_reps,
                             'sets': [],
@@ -271,7 +311,7 @@ class WorkoutSessionDetailSerializer(_WorkoutSessionCommonMixin):
                         'exercise_name': le.exercise.name,
                         'order': idx,
                         'unrecorded': True,
-                        'status': 'sin registro',
+                        'status': 'unrecorded',
                         'sets': [],
                     })
 
@@ -299,6 +339,20 @@ class WorkoutSessionDetailSerializer(_WorkoutSessionCommonMixin):
 
     def get_exercises(self, obj):
         return self._build_session_exercises_data(obj)['exercises']
+
+    def validate_routine(self, value):
+        request = self.context.get('request')
+        if value is not None and request and request.user and request.user.is_authenticated:
+            if value.user_id != request.user.id and not value.is_template:
+                raise serializers.ValidationError('You do not have permission to use this routine.')
+        return value
+
+    def validate_routine_day(self, value):
+        request = self.context.get('request')
+        if value is not None and request and request.user and request.user.is_authenticated:
+            if value.routine.user_id != request.user.id and not value.routine.is_template:
+                raise serializers.ValidationError('You do not have permission to use this routine day.')
+        return value
 
     def create(self, validated_data):
         user = self.context['request'].user

@@ -5,7 +5,7 @@ from django.conf.urls.static import static
 from django.views.generic import TemplateView
 
 urlpatterns = [
-    # Vista Frontend Rápida (Prototipo funcional)
+    # Quick Frontend Prototype View
     path('', TemplateView.as_view(template_name='index.html'), name='home'),
 
     path('admin/', admin.site.urls),
@@ -17,7 +17,7 @@ urlpatterns = [
     path('api/v1/tracking/', include('apps.tracking.urls')),
 ]
 
-# Servir archivos estáticos y multimedia en desarrollo
+# Serve static and media files in development
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

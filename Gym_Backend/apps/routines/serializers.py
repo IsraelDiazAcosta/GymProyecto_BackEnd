@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.db import transaction
 from rest_framework import serializers
 from apps.catalog.serializers import ExerciseListSerializer
@@ -5,8 +6,25 @@ from .models import Routine, RoutineDay, RoutineExercise, RoutineSet
 
 class RoutineSetSerializer(serializers.ModelSerializer):
     set_type_display = serializers.CharField(source='get_set_type_display', read_only=True)
-    min_reps = serializers.IntegerField(min_value=1)
-    max_reps = serializers.IntegerField(min_value=1)
+    min_reps = serializers.IntegerField(min_value=1, max_value=1000)
+    max_reps = serializers.IntegerField(min_value=1, max_value=1000)
+    target_rpe = serializers.DecimalField(
+        max_digits=3,
+        decimal_places=1,
+        min_value=Decimal('1.0'),
+        max_value=Decimal('10.0'),
+        required=False,
+        allow_null=True,
+    )
+    target_rir = serializers.IntegerField(min_value=0, max_value=20, required=False, allow_null=True)
+    target_weight = serializers.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        min_value=Decimal('0.00'),
+        max_value=Decimal('9999.99'),
+        required=False,
+        allow_null=True,
+    )
 
     class Meta:
         model = RoutineSet
@@ -16,16 +34,16 @@ class RoutineSetSerializer(serializers.ModelSerializer):
         min_r = attrs.get('min_reps', getattr(self.instance, 'min_reps', 1))
         max_r = attrs.get('max_reps', getattr(self.instance, 'max_reps', 1))
         if min_r > max_r:
-            raise serializers.ValidationError({'min_reps': 'min_reps no puede ser mayor que max_reps.'})
+            raise serializers.ValidationError({'min_reps': 'min_reps cannot be greater than max_reps.'})
         return attrs
 
 
 class RoutineExerciseSerializer(serializers.ModelSerializer):
     exercise_detail = ExerciseListSerializer(source='exercise', read_only=True)
     target_sets = RoutineSetSerializer(many=True, required=False)
-    sets_count = serializers.IntegerField(write_only=True, required=False, min_value=1)
-    min_reps = serializers.IntegerField(write_only=True, required=False, min_value=1)
-    max_reps = serializers.IntegerField(write_only=True, required=False, min_value=1)
+    sets_count = serializers.IntegerField(write_only=True, required=False, min_value=1, max_value=30)
+    min_reps = serializers.IntegerField(write_only=True, required=False, min_value=1, max_value=1000)
+    max_reps = serializers.IntegerField(write_only=True, required=False, min_value=1, max_value=1000)
 
     class Meta:
         model = RoutineExercise
@@ -38,7 +56,7 @@ class RoutineExerciseSerializer(serializers.ModelSerializer):
         min_r = attrs.get('min_reps')
         max_r = attrs.get('max_reps')
         if min_r is not None and max_r is not None and min_r > max_r:
-            raise serializers.ValidationError({'min_reps': 'min_reps no puede ser mayor que max_reps.'})
+            raise serializers.ValidationError({'min_reps': 'min_reps cannot be greater than max_reps.'})
         return attrs
 
     @transaction.atomic
@@ -101,7 +119,7 @@ class RoutineExerciseSerializer(serializers.ModelSerializer):
             final_min = min_reps if min_reps is not None else (ref_set.min_reps if ref_set else 8)
             final_max = max_reps if max_reps is not None else (ref_set.max_reps if ref_set else final_min)
             if final_min > final_max:
-                raise serializers.ValidationError({'min_reps': 'min_reps no puede ser mayor que max_reps.'})
+                raise serializers.ValidationError({'min_reps': 'min_reps cannot be greater than max_reps.'})
 
             common_len = min(len(existing_sets), final_sets)
             for idx in range(common_len):
@@ -112,7 +130,7 @@ class RoutineExerciseSerializer(serializers.ModelSerializer):
                 if max_reps is not None:
                     s_obj.max_reps = final_max
                 if s_obj.min_reps > s_obj.max_reps:
-                    raise serializers.ValidationError({'min_reps': 'min_reps no puede ser mayor que max_reps.'})
+                    raise serializers.ValidationError({'min_reps': 'min_reps cannot be greater than max_reps.'})
                 s_obj.save()
 
             if final_sets > len(existing_sets):
@@ -174,7 +192,18 @@ class RoutineDetailSerializer(serializers.ModelSerializer):
         read_only_fields = ('id', 'user', 'created_at', 'updated_at')
 
     def create(self, validated_data):
-        user = self.context['request'].user
-        validated_data['user'] = user
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        if user and user.is_authenticated:
+            validated_data['user'] = user
+        if not (user and getattr(user, 'is_staff', False)):
+            validated_data['is_template'] = False
         return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        if not (user and getattr(user, 'is_staff', False)):
+            validated_data.pop('is_template', None)
+        return super().update(instance, validated_data)
 

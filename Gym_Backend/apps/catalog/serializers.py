@@ -8,7 +8,7 @@ from .models import Equipment, MuscleGroup, Exercise, ExerciseMuscle, ExerciseMe
 
 
 class FlexibleImageField(serializers.ImageField):
-    """Acepta archivos multipart estándar o imágenes codificadas en Base64 (Data URI, string puro o dict)."""
+    """Accepts standard multipart files or Base64-encoded images (Data URI, raw string, or dict)."""
 
     def to_internal_value(self, data):
         raw_name = None
@@ -174,7 +174,7 @@ class ExerciseDetailSerializer(serializers.ModelSerializer):
                 exercise=exercise,
                 media_type='video',
                 external_url=video_url,
-                title='Demostración en video'
+                title='Video demonstration'
             )
 
         return exercise
@@ -207,7 +207,7 @@ class ExerciseDetailSerializer(serializers.ModelSerializer):
                         exercise=instance,
                         media_type='video',
                         external_url=video_url,
-                        title='Demostración en video',
+                        title='Video demonstration',
                     )
             elif existing_video:
                 existing_video.delete()
