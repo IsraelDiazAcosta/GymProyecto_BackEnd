@@ -2,6 +2,7 @@ from django.db import transaction
 from django.db.models import Exists, OuterRef, Value, BooleanField, Prefetch
 from rest_framework import viewsets, permissions, filters, status
 from rest_framework.decorators import action
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.response import Response
 from .models import Equipment, MuscleGroup, Exercise, ExerciseMedia, UserFavoriteEquipment, UserFavoriteExercise
@@ -14,10 +15,18 @@ from .serializers import (
     ExerciseMediaSerializer,
 )
 
+
+class CatalogPagination(PageNumberPagination):
+    page_size = 20
+    page_size_query_param = 'page_size'
+    max_page_size = 500
+
+
 class EquipmentViewSet(viewsets.ModelViewSet):
     queryset = Equipment.objects.all()
     serializer_class = EquipmentSerializer
     permission_classes = [IsAdminOrReadOnly]
+    pagination_class = CatalogPagination
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     filter_backends = [filters.SearchFilter]
     search_fields = ['name', 'brand', 'equipment_type']
@@ -63,6 +72,7 @@ class MuscleGroupViewSet(viewsets.ModelViewSet):
     queryset = MuscleGroup.objects.all()
     serializer_class = MuscleGroupSerializer
     permission_classes = [IsAdminOrReadOnly]
+    pagination_class = CatalogPagination
     filter_backends = [filters.SearchFilter]
     search_fields = ['name', 'body_part']
 
@@ -77,6 +87,7 @@ class MuscleGroupViewSet(viewsets.ModelViewSet):
 class ExerciseViewSet(viewsets.ModelViewSet):
     queryset = Exercise.objects.prefetch_related('exercise_muscles__muscle', 'media').select_related('equipment').all()
     permission_classes = [IsAdminOrReadOnly]
+    pagination_class = CatalogPagination
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     filter_backends = [filters.SearchFilter]
     search_fields = ['name', 'equipment__name', 'muscles__name']
