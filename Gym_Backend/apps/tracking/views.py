@@ -22,7 +22,7 @@ from django.db.models import (
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 from django.utils.dateparse import parse_date, parse_datetime
-from apps.routines.models import Routine
+from apps.routines.models import Routine, RoutineExercise
 from .models import WorkoutSession, WorkoutLogExercise, WorkoutSetLog, PersonalRecord
 from .serializers import (
     WorkoutSessionListSerializer,
@@ -154,15 +154,15 @@ class WorkoutSessionViewSet(viewsets.ModelViewSet):
             .first()
         )
 
+    @staticmethod
+    def _has_logged_sets(session):
+        return WorkoutSetLog.objects.filter(log_exercise__session=session).exists()
+
     @action(detail=False, methods=['post'], url_path='start')
     def start_session(self, request):
         """Starts a session for the given routine or returns the existing active session."""
-        existing = self._get_active_session(request.user)
-        if existing:
-            return Response(WorkoutSessionDetailSerializer(existing).data)
-
         routine_id = request.data.get('routine_id') or request.data.get('routine')
-        routine = None
+        parsed_rid = None
         if routine_id:
             parsed_rid = _parse_uuid(routine_id)
             if not parsed_rid:
@@ -170,6 +170,24 @@ class WorkoutSessionViewSet(viewsets.ModelViewSet):
                     {'detail': 'Invalid routine ID.'},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
+
+        existing = self._get_active_session(request.user)
+        if existing:
+            existing_rid = existing.routine_id or (
+                existing.routine_day.routine_id if existing.routine_day else None
+            )
+            if parsed_rid is not None and existing_rid is not None and str(existing_rid) != str(parsed_rid):
+                return Response(
+                    {
+                        'detail': f'You already have an active session for "{existing.title}". Finish or cancel it before starting another routine.',
+                        'active_session_id': str(existing.id),
+                    },
+                    status=status.HTTP_409_CONFLICT,
+                )
+            return Response(WorkoutSessionDetailSerializer(existing).data)
+
+        routine = None
+        if parsed_rid:
             routine = (
                 Routine.objects.filter(
                     Q(user=request.user) | Q(is_template=True),
@@ -182,6 +200,11 @@ class WorkoutSessionViewSet(viewsets.ModelViewSet):
                 return Response(
                     {'detail': 'Routine not found.'},
                     status=status.HTTP_404_NOT_FOUND,
+                )
+            if not RoutineExercise.objects.filter(routine_day__routine=routine).exists():
+                return Response(
+                    {'detail': 'This routine has no exercises. Add at least one exercise before starting a session.'},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
 
         session = WorkoutSession.objects.create(
@@ -205,6 +228,11 @@ class WorkoutSessionViewSet(viewsets.ModelViewSet):
             return Response(
                 {'detail': 'No active session found.'},
                 status=status.HTTP_404_NOT_FOUND,
+            )
+        if not self._has_logged_sets(session):
+            return Response(
+                {'detail': 'You must log at least one set before finishing the workout session.'},
+                status=status.HTTP_400_BAD_REQUEST,
             )
         now = timezone.now()
         session.end_time = now
@@ -232,6 +260,16 @@ class WorkoutSessionViewSet(viewsets.ModelViewSet):
     def finish_session(self, request, pk=None):
         """Finishes the current workout session."""
         session = self.get_object()
+        if session.status != 'active':
+            return Response(
+                {'detail': 'Only an active session can be finished.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if not self._has_logged_sets(session):
+            return Response(
+                {'detail': 'You must log at least one set before finishing the workout session.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         now = timezone.now()
         session.end_time = now
         session.is_completed = True
@@ -459,24 +497,45 @@ class WorkoutSetLogViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return WorkoutSetLog.objects.filter(log_exercise__session__user=self.request.user)
 
-    def perform_create(self, serializer):
-        set_log = serializer.save()
-        # Check and update personal record (PR)
-        exercise = set_log.log_exercise.exercise
-        user = self.request.user
-
-        # Maximum weight lifted
-        current_max = PersonalRecord.objects.filter(
-            user=user, exercise=exercise, record_type='max_weight'
-        ).first()
-
-        if not current_max or set_log.weight > current_max.value:
+    @staticmethod
+    def _recalculate_max_weight_pr(user, exercise):
+        best_set = (
+            WorkoutSetLog.objects.filter(
+                log_exercise__session__user=user,
+                log_exercise__exercise=exercise,
+                is_completed=True,
+            )
+            .order_by('-weight', '-logged_at')
+            .first()
+        )
+        if best_set:
             PersonalRecord.objects.update_or_create(
                 user=user,
                 exercise=exercise,
                 record_type='max_weight',
-                defaults={'value': set_log.weight, 'achieved_at': timezone.now()}
+                defaults={
+                    'value': best_set.weight,
+                    'achieved_at': best_set.logged_at or timezone.now(),
+                },
             )
+        else:
+            PersonalRecord.objects.filter(
+                user=user, exercise=exercise, record_type='max_weight'
+            ).delete()
+
+    def perform_create(self, serializer):
+        set_log = serializer.save()
+        self._recalculate_max_weight_pr(self.request.user, set_log.log_exercise.exercise)
+
+    def perform_update(self, serializer):
+        set_log = serializer.save()
+        self._recalculate_max_weight_pr(self.request.user, set_log.log_exercise.exercise)
+
+    def perform_destroy(self, instance):
+        exercise = instance.log_exercise.exercise
+        user = self.request.user
+        instance.delete()
+        self._recalculate_max_weight_pr(user, exercise)
 
 
 class ExerciseProgressionView(APIView):

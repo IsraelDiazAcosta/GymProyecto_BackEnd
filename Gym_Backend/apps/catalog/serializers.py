@@ -3,6 +3,7 @@ import binascii
 import os
 import uuid
 from django.core.files.base import ContentFile
+from django.utils.text import slugify
 from rest_framework import serializers
 from .models import Equipment, MuscleGroup, Exercise, ExerciseMuscle, ExerciseMedia, UserFavoriteEquipment, validate_image
 
@@ -149,6 +150,17 @@ class ExerciseDetailSerializer(serializers.ModelSerializer):
             'mechanics', 'difficulty', 'instructions', 'tips', 'media', 
             'created_at', 'updated_at'
         )
+
+    def validate_name(self, value):
+        slug = slugify(value)
+        if not slug:
+            raise serializers.ValidationError("Exercise name must contain letters or numbers.")
+        qs = Exercise.objects.filter(slug=slug)
+        if self.instance is not None:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError("An exercise with this name or a similar name already exists.")
+        return value
 
     def get_image_url(self, obj):
         return _resolve_exercise_image_url(obj, self.context.get('request'))

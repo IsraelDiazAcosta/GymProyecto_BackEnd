@@ -2,6 +2,7 @@ from decimal import Decimal
 from django.utils import timezone
 from rest_framework import serializers
 from apps.catalog.serializers import ExerciseListSerializer
+from apps.routines.models import RoutineExercise
 from .models import WorkoutSession, WorkoutLogExercise, WorkoutSetLog, PersonalRecord
 
 class WorkoutSetLogSerializer(serializers.ModelSerializer):
@@ -38,6 +39,8 @@ class WorkoutSetLogSerializer(serializers.ModelSerializer):
         if request and request.user and request.user.is_authenticated:
             if value.session.user_id != request.user.id:
                 raise serializers.ValidationError('You do not have permission to log sets for this exercise.')
+        if self.instance is None and value.session.status != 'active':
+            raise serializers.ValidationError('You can only log sets in an active workout session.')
         return value
 
 
@@ -55,7 +58,21 @@ class WorkoutLogExerciseSerializer(serializers.ModelSerializer):
         if request and request.user and request.user.is_authenticated:
             if value.user_id != request.user.id:
                 raise serializers.ValidationError('You do not have permission to log exercises in this session.')
+        if self.instance is None and value.status != 'active':
+            raise serializers.ValidationError('You can only log exercises in an active workout session.')
         return value
+
+    def validate(self, attrs):
+        session = attrs.get('session') or getattr(self.instance, 'session', None)
+        exercise = attrs.get('exercise') or getattr(self.instance, 'exercise', None)
+        if session and exercise:
+            routine = session.routine or (session.routine_day.routine if session.routine_day else None)
+            if routine is not None:
+                if not RoutineExercise.objects.filter(routine_day__routine=routine, exercise=exercise).exists():
+                    raise serializers.ValidationError({
+                        'exercise': 'This exercise does not belong to the active session routine.'
+                    })
+        return attrs
 
 
 class _WorkoutSessionCommonMixin(serializers.ModelSerializer):

@@ -71,14 +71,32 @@ class RoutineViewSet(viewsets.ModelViewSet):
         notes = data.get('notes', '') or ''
         next_order = day.exercises.count() + 1
 
+        existing_ids = set(
+            RoutineExercise.objects.filter(routine_day__routine=day.routine).values_list(
+                'exercise_id', flat=True
+            )
+        )
+
+        validated_exercises = []
+        seen_ids = set()
         for eid in ids_to_add:
             try:
                 parsed_eid = uuid.UUID(str(eid))
             except (TypeError, ValueError):
                 raise ValidationError({'exercise_ids': f'Invalid exercise ID: {eid}'})
+            if parsed_eid in seen_ids:
+                continue
+            seen_ids.add(parsed_eid)
             exercise = Exercise.objects.filter(pk=parsed_eid).first()
             if not exercise:
                 raise ValidationError({'exercise_ids': f'Exercise not found: {eid}'})
+            if parsed_eid not in existing_ids:
+                validated_exercises.append(exercise)
+
+        if not validated_exercises:
+            raise ValidationError({'exercise_ids': 'This exercise is already assigned to this routine.'})
+
+        for exercise in validated_exercises:
             routine_ex = RoutineExercise.objects.create(
                 routine_day=day,
                 exercise=exercise,
@@ -94,6 +112,18 @@ class RoutineViewSet(viewsets.ModelViewSet):
                     min_reps=min_reps,
                     max_reps=max_reps,
                 )
+
+    def perform_destroy(self, instance):
+        from apps.tracking.models import WorkoutSession
+
+        if WorkoutSession.objects.filter(
+            status='active',
+            is_completed=False,
+        ).filter(Q(routine=instance) | Q(routine_day__routine=instance)).exists():
+            raise ValidationError({
+                'detail': 'Cannot delete a routine while it has an active workout session.'
+            })
+        instance.delete()
 
     def perform_create(self, serializer):
         with transaction.atomic():
@@ -169,6 +199,7 @@ class RoutineViewSet(viewsets.ModelViewSet):
 class RoutineDayViewSet(viewsets.ModelViewSet):
     serializer_class = RoutineDaySerializer
     permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ['get', 'patch', 'put', 'delete', 'head', 'options']
 
     def get_queryset(self):
         return RoutineDay.objects.filter(routine__user=self.request.user)
@@ -182,16 +213,35 @@ class IsRoutineExerciseOwner(permissions.BasePermission):
 class RoutineExerciseViewSet(viewsets.ModelViewSet):
     serializer_class = RoutineExerciseSerializer
     permission_classes = [permissions.IsAuthenticated, IsRoutineExerciseOwner]
+    http_method_names = ['get', 'patch', 'put', 'delete', 'head', 'options']
 
     def get_queryset(self):
         return RoutineExercise.objects.filter(
             routine_day__routine__user=self.request.user
         ).select_related('exercise', 'routine_day__routine').prefetch_related('target_sets')
 
+    def perform_destroy(self, instance):
+        from apps.tracking.models import WorkoutSession
+
+        routine = instance.routine_day.routine
+        has_active_session = (
+            WorkoutSession.objects.filter(status='active', is_completed=False)
+            .filter(Q(routine=routine) | Q(routine_day__routine=routine))
+            .exists()
+        )
+        if has_active_session and RoutineExercise.objects.filter(
+            routine_day__routine=routine
+        ).exclude(pk=instance.pk).count() == 0:
+            raise ValidationError({
+                'detail': 'Cannot remove the last exercise from a routine with an active workout session.'
+            })
+        instance.delete()
+
 
 class RoutineSetViewSet(viewsets.ModelViewSet):
     serializer_class = RoutineSetSerializer
     permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ['get', 'patch', 'put', 'delete', 'head', 'options']
 
     def get_queryset(self):
         return RoutineSet.objects.filter(routine_exercise__routine_day__routine__user=self.request.user)

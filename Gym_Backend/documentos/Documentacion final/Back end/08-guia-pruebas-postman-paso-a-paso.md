@@ -230,9 +230,9 @@ Explica **qué hace cada consulta**, **qué método HTTP usa**, **qué permisos 
 | **5.2** | `POST` | `/routines/routines/` | Autenticado | Crea una rutina nueva junto con `Day 1`, los ejercicios en `exercise_ids` y sus series objetivo. Guarda `{{routine_id}}`, `{{routine_day_id}}` y `{{routine_exercise_id}}`. |
 | **5.3** | `GET` | `/routines/routines/{{routine_id}}/` | Autenticado | Obtiene el detalle completo de una rutina con sus días, ejercicios y sets. |
 | **5.4** | `PATCH` | `/routines/routines/{{routine_id}}/` | Autenticado | Edita título o descripción de la rutina. |
-| **5.5** | `POST` | `/routines/routines/{{routine_id}}/add-exercise/` | Autenticado | Agrega uno o más ejercicios con sus series (`sets_count`), `min_reps`, `max_reps` y `rest_seconds`. |
+| **5.5** | `POST` | `/routines/routines/{{routine_id}}/add-exercise/` | Autenticado | Agrega uno o más ejercicios con sus series (`sets_count`), `min_reps`, `max_reps` y `rest_seconds` *(rechaza ejercicios duplicados en la misma rutina con `400`)*. |
 | **5.6** | `POST` | `/routines/routines/{{routine_id}}/clone/` | Autenticado | Crea una copia personal completa de una rutina o plantilla. |
-| **5.7** | `DELETE` | `/routines/routines/{{routine_id}}/` | Autenticado | Elimina la rutina completa *(dejar para el final si la vas a usar en Tracking)*. |
+| **5.7** | `DELETE` | `/routines/routines/{{routine_id}}/` | Autenticado | Elimina la rutina completa *(requiere que no tenga una sesión activa en curso → `400`; dejar para el final si la vas a usar en Tracking)*. |
 | **5.8** | `GET` | `/routines/days/` | Autenticado | Lista los días de tus rutinas. |
 | **5.9** | `PATCH` | `/routines/days/{{routine_day_id}}/` | Autenticado | Cambia el nombre u orden de un día de rutina. |
 | **5.10** | `GET` | `/routines/exercises/` | Autenticado | Lista todos los ejercicios asignados a tus rutinas. Guarda `{{routine_exercise_id}}`. |
@@ -250,18 +250,18 @@ Explica **qué hace cada consulta**, **qué método HTTP usa**, **qué permisos 
 ### Flujo de entrenamiento en vivo (en este orden)
 | Orden | Tipo | URL | Permiso | Qué hace |
 | :--- | :--- | :--- | :--- | :--- |
-| **6.1** | `POST` | `/tracking/sessions/start/` | Autenticado | Inicia una sesión con cronómetro vinculada a `{{routine_id}}`. Guarda `{{session_id}}`. |
+| **6.1** | `POST` | `/tracking/sessions/start/` | Autenticado | Inicia una sesión con cronómetro vinculada a `{{routine_id}}` *(requiere rutina con ≥1 ejercicio → `400`, y devuelve `409` si ya hay otra rutina activa)*. Guarda `{{session_id}}`. |
 | **6.2** | `GET` | `/tracking/sessions/active/` | Autenticado | Consulta si hay una sesión activa en curso (devuelve la sesión o `null`). |
-| **6.3** | `POST` | `/tracking/exercises/` | Autenticado | Vincula `{{exercise_id}}` dentro de `{{session_id}}`. Guarda `{{log_exercise_id}}`. |
+| **6.3** | `POST` | `/tracking/exercises/` | Autenticado | Vincula `{{exercise_id}}` dentro de `{{session_id}}` *(debe pertenecer a la rutina activa)*. Guarda `{{log_exercise_id}}`. |
 | **6.4** | `POST` | `/tracking/sets/` | Autenticado | Registra una serie real (`weight`, `reps`, `rpe`). Calcula automáticamente `estimated_1rm` y actualiza el récord personal (PR). Guarda `{{set_log_id}}`. |
-| **6.5** | `PATCH` | `/tracking/sets/{{set_log_id}}/` | Autenticado | Edita el peso, repeticiones o RPE de una serie registrada. |
-| **6.6** | `DELETE` | `/tracking/sets/{{set_log_id}}/` | Autenticado | Elimina una serie registrada *(opcional; si la borras, vuelve a correr 6.4 para ver datos en las gráficas)*. |
-| **6.7** | `POST` | `/tracking/sessions/finish/` | Autenticado | Finaliza la sesión activa, calcula `duration_seconds` y la marca como `completed`. |
+| **6.5** | `PATCH` | `/tracking/sets/{{set_log_id}}/` | Autenticado | Edita el peso, repeticiones o RPE de una serie registrada y recalcula el PR. |
+| **6.6** | `DELETE` | `/tracking/sets/{{set_log_id}}/` | Autenticado | Elimina una serie registrada y recalcula el PR *(opcional; si borras todas, vuelve a correr 6.4 antes de finalizar)*. |
+| **6.7** | `POST` | `/tracking/sessions/finish/` | Autenticado | Finaliza la sesión activa, calcula `duration_seconds` y la marca como `completed` *(exige ≥1 serie registrada → `400`)*. |
 
 ### Acciones extra de sesiones, historial y gráficas
 | Orden | Tipo | URL | Permiso | Qué hace |
 | :--- | :--- | :--- | :--- | :--- |
-| **6.8** | `POST` | `/tracking/sessions/{{session_id}}/finish/` | Autenticado | Finaliza una sesión específica pasándole su UUID. |
+| **6.8** | `POST` | `/tracking/sessions/{{session_id}}/finish/` | Autenticado | Finaliza una sesión específica activa pasándole su UUID *(exige ≥1 serie registrada → `400`)*. |
 | **6.9** | `POST` | `/tracking/sessions/cancel/` | Autenticado | Descarta la sesión activa marcándola como `cancelled`. |
 | **6.10** | `GET` | `/tracking/sessions/` | Autenticado | Lista todas las sesiones del usuario (activas, completadas o canceladas). |
 | **6.11** | `POST` | `/tracking/sessions/` | Autenticado | Crea una sesión manual directamente. Guarda `{{session_id}}`. |
